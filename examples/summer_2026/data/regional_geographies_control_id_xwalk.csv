@@ -1,0 +1,164 @@
+reg_id,control_id,control_na
+King_Algona,27,Algona
+King_Auburn,3,Auburn
+King_Auburn PAA,46,Auburn PAA
+King_Bear Creek UPD,201,King no growth UGA Bear Creek UPD
+King_Beaux Arts,28,Beaux Arts
+King_Bellevue,1,Bellevue
+King_Bellevue PAA,48,Bellevue PAA
+King_Black Diamond,29,Black Diamond
+King_Black Diamond PAA,49,Black Diamond PAA
+King_Bothell,4,Bothell
+King_Burien,5,Burien
+King_Carnation,30,Carnation
+King_Carnation UGA,202,Carnation UGA
+King_Clyde Hill,31,Clyde Hill
+King_Covington,32,Covington
+King_Covington PAA,203,Covington PAA
+King_Des Moines,14,Des Moines
+King_Duvall,33,Duvall
+King_Duvall UGA,204,Duvall UGA
+King_Enumclaw,34,Enumclaw
+King_Enumclaw UGA,205,Enumclaw UGA
+King_Federal Way,6,Federal Way
+King_Federal Way PAA,15,Federal Way PAA
+King_Hunts Point,35,Hunts Point
+King_Issaquah,7,Issaquah
+King_Issaquah PAA,51,Issaquah PAA
+King_Kenmore,16,Kenmore
+King_Kent,8,Kent
+King_Kent PAA,52,Kent PAA
+King_King UGA,53,King UGA
+King_Kirkland,9,Kirkland
+King_Lake Forest Park,17,Lake Forest Park
+King_Maple Valley,36,Maple Valley
+King_Medina,37,Medina
+King_Mercer Island,18,Mercer Island
+King_Milton,38,Milton
+King_Milton PAA,206,King no growth UGA Milton PAA
+King_Newcastle,19,Newcastle
+King_Newcastle PAA,57,Newcastle PAA
+King_Normandy Park,39,Normandy Park
+King_North Bend,40,North Bend
+King_North Bend UGA,207,North Bend UGA
+King_North Highline UGA,20,North Highline
+King_Pacific,41,Pacific
+King_Pacific PAA,58,Pacific PAA
+King_Redmond,10,Redmond
+King_Redmond PAA,60,Redmond PAA
+King_Renton,11,Renton
+King_Renton PAA,,
+King_Sammamish,42,Sammamish
+King_Sammamish PAA,61,Sammamish PAA
+King_Sea Tac,12,SeaTac
+King_Seattle,2,Seattle
+King_Seattle PAA,20,North Highline
+King_Shoreline,25,Shoreline
+King_Skykomish,43,Skykomish
+King_Snoqualmie,44,Snoqualmie
+King_Snoqualmie UGA,208,Snoqualmie UGA
+King_Tukwila,13,Tukwila
+King_Tukwila PAA,209,King no growth UGA Tukwila PAA
+King_Woodinville,26,Woodinville
+King_Yarrow Point,45,Yarrow Point
+Kitsap_Bainbridge Island,69,Bainbridge Island
+Kitsap_Bremerton,65,Bremerton
+Kitsap_Bremerton UGA,67,Bremerton UGA
+Kitsap_Central Kitsap UGA,75,Central Kitsap UGA
+Kitsap_Kingston UGA,70,Kingston UGA
+Kitsap_Port Orchard,71,Port Orchard
+Kitsap_Port Orchard UGA,72,Port Orchard UGA
+Kitsap_Poulsbo,73,Poulsbo
+Kitsap_Poulsbo PUTA,74,Poulsbo PUTA
+Kitsap_Silverdale UGA,68,Silverdale
+Pierce_Auburn,78,Auburn
+Pierce_Auburn PAA,107,Pierce UGA
+Pierce_Bonney Lake,87,Bonney Lake
+Pierce_Bonney Lake PAA,107,Pierce UGA
+Pierce_Buckley,88,Buckley
+Pierce_Carbonado,89,Carbonado
+Pierce_Carbonado PAA,107,Pierce UGA
+Pierce_DuPont,82,DuPont
+Pierce_Eatonville,90,Eatonville
+Pierce_Eatonville PAA,107,Pierce UGA
+Pierce_Edgewood,91,Edgewood
+Pierce_Enumclaw,124,Pierce Rural
+Pierce_Fife,83,Fife
+Pierce_Fife Milton Overlap,107,Pierce UGA
+Pierce_Fife PAA,107,Pierce UGA
+Pierce_Fircrest,84,Fircrest
+Pierce_Frederickson,107,Pierce UGA
+Pierce_Gig Harbor,92,Gig Harbor
+Pierce_Gig Harbor PAA,107,Pierce UGA
+Pierce_JBLM UGA,405,JBLM
+Pierce_Lakewood,79,Lakewood
+Pierce_Lakewood Steilacoom Overlap,107,Pierce UGA
+Pierce_Milton,93,Milton
+Pierce_Milton PAA,107,Pierce UGA
+Pierce_Orting,94,Orting
+Pierce_Pacific,95,Pacific
+Pierce_Pacific PAA,107,Pierce UGA
+Pierce_Parkland-Spanaway-Midland PAA,85,"Mid-County, Parkland-Spanaway-Midland, South Hill"
+Pierce_Pierce Mid-County,85,"Mid-County, Parkland-Spanaway-Midland, South Hill"
+Pierce_Pierce UGA,107,Pierce UGA
+Pierce_Puyallup,80,Puyallup
+Pierce_Puyallup PAA,107,Pierce UGA
+Pierce_Puyallup PAA/South Hill PIA Overlap,85,"Mid-County, Parkland-Spanaway-Midland, South Hill"
+Pierce_Roy,96,Roy
+Pierce_Roy PAA,107,Pierce UGA
+Pierce_Ruston,97,Ruston
+Pierce_South Hill PIA,85,"Mid-County, Parkland-Spanaway-Midland, South Hill"
+Pierce_South Prairie,98,South Prairie
+Pierce_South Prairie PAA,107,Pierce UGA
+Pierce_Steilacoom,99,Steilacoom
+Pierce_Sumner,86,Sumner
+Pierce_Sumner PAA,107,Pierce UGA
+Pierce_Tacoma,77,Tacoma
+Pierce_Tacoma PAA,85,"Mid-County, Parkland-Spanaway-Midland, South Hill"
+Pierce_Tehaleh PIA,107,Pierce UGA
+Pierce_University Place,81,University Place
+Pierce_Wilkeson,100,Wilkeson
+Snohomish_Arlington,128,Arlington
+Snohomish_Arlington UGA,155,Arlington UGA
+Snohomish_Bothell,126,Bothell
+Snohomish_Bothell MUGA,129,Bothell MUGA
+Snohomish_Brier,143,Brier
+Snohomish_Brier MUGA,156,Brier MUGA
+Snohomish_Darrington,144,Darrington
+Snohomish_Darrington UGA,157,Darrington UGA
+Snohomish_Edmonds,130,Edmonds
+Snohomish_Edmonds MUGA,131,Edmonds MUGA
+Snohomish_Everett,125,Everett
+Snohomish_Everett MUGA,132,Everett MUGA
+Snohomish_Gold Bar,145,Gold Bar
+Snohomish_Gold Bar UGA,158,Gold Bar UGA
+Snohomish_Granite Falls,146,Granite Falls
+Snohomish_Granite Falls UGA,159,Granite Falls UGA
+Snohomish_Index,147,Index
+Snohomish_Lake Stevens,148,Lake Stevens
+Snohomish_Lake Stevens UGA,161,Lake Stevens UGA
+Snohomish_Lake Stickney Gap UGA,162,Lake Stickney Gap
+Snohomish_Larch Way Overlap,133,Larch Way Overlap
+Snohomish_Lynnwood,127,Lynnwood
+Snohomish_Lynnwood MUGA,135,Lynnwood MUGA
+Snohomish_Maltby UGA,163,Maltby UGA
+Snohomish_Marysville,136,Marysville
+Snohomish_Marysville UGA,164,Marysville UGA
+Snohomish_Mill Creek,138,Mill Creek
+Snohomish_Mill Creek MUGA,139,Mill Creek MUGA
+Snohomish_Monroe,149,Monroe
+Snohomish_Monroe UGA,166,Monroe UGA
+Snohomish_Mountlake Terrace,140,Mountlake Terrace
+Snohomish_Mountlake Terrace MUGA,167,Mountlake Terrace MUGA
+Snohomish_Mukilteo,141,Mukilteo
+Snohomish_Mukilteo MUGA,142,Mukilteo MUGA
+Snohomish_Paine Field Area UGA,168,Paine Field Area
+Snohomish_Silver Firs Gap UGA,169,Silver Firs Gap
+Snohomish_Snohomish,150,Snohomish
+Snohomish_Snohomish UGA,170,Snohomish UGA
+Snohomish_Stanwood,151,Stanwood
+Snohomish_Stanwood UGA,172,Stanwood UGA
+Snohomish_Sultan,152,Sultan
+Snohomish_Sultan UGA,174,Sultan UGA
+Snohomish_Woodway,153,Woodway
+Snohomish_Woodway MUGA,175,Woodway MUGA

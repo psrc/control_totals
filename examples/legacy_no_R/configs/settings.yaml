@@ -1,0 +1,330 @@
+#----------------------------
+# General settings
+#----------------------------
+data_dir: data
+output_dir: output
+
+base_year: 2020 
+end_year: 2050 # final year for control totals output
+
+targets_end_year: 2044 # year for which growth targets are set
+
+#----------------------------
+# Target Methodology settings
+#----------------------------
+target_types:
+  unit_chg: [] # targets based on housing unit change
+  total_pop_chg: [53035,53053,53061] # targets based on total population change
+  king_cnty_method: True # king county targets are using original "King Tech Work" methodology
+
+#----------------------------
+# Transit buffer settings
+#----------------------------
+# hct_buffers:
+#   brt: 1320
+#   commuter_r: 2640
+#   light_rail: 2640
+#   ferry: 2640
+
+#----------------------------
+# Hard coded King County gq, hhsz and vacancy rates by rgid
+# need to add these as calculations in the future once I find the source
+#----------------------------
+king_gq: # first column is rgid, second is gq percentage
+  1: 3.4
+  2: 1.2
+  3: 1.6
+  4: .3
+  5: .3
+  6: .4
+
+king_hhsz: # first column is rgid, second is average household size
+  1: 2.12
+  2: 2.52
+  3: 2.51
+  4: 2.75
+  5: 2.65
+  6: 2.62
+
+king_metro_adj_hhsz: 2.00 # adjusted hhsz used for king county metro rgid areas when calclulating hhpop
+                          # for the targets, the rgid totals still use the king_hhsz value above
+
+king_vac: # first column is rgid, second is vacancy rate percentage
+  1: 4.7
+  2: 4.4
+  3: 3.6
+  4: 3.0
+  5: 3.0
+  6: 5.0
+
+king_hhpop_2044: 2828620 # target household population for king county in 2044
+                         # not sure where this number comes from, will need to
+                         # replace with calculated value in the future
+
+#----------------------------
+# Employment settings
+#----------------------------
+emp_target_types:
+  includes res con: [53035, 53053] # Kitsap and Pierce targets include resource and construction employment
+  excludes res con: [53033, 53061] # King, Snohomish targets do not include resource and construction employment
+
+res_con_emp_growth_pct: 0.028 # percentage of employment growth from resource and construction
+                              # ussed to adjust King and Snohomish employment growth targets since they 
+                              # exclude resource and construction employment. Originally based on REF
+                              # projections, will need to be updated, possibly with REMI
+
+#----------------------------
+# R replacement - Parcels capacity settings
+#----------------------------
+parcels_capacity:
+  prop_path: "N:/vision2050/opusgit/urbansim_data/data/psrc_parcel/runs/flatten/run_36.2025_06_02_14_35_unlimited_1x/csv/2024"
+  lookup_path: "N:/vision2050/opusgit/urbansim_data/data/psrc_parcel/runs/flatten/run_36.2025_06_02_14_35_unlimited_1x/csv/2023"
+  res_ratio: 50           # residential share percentage for mixed-use parcels (0-100)
+  mu_sampling: false      # sample parcels (true) or apply ratio to units (false)
+  rng_seed: 1             # random seed for reproducibility
+  save_csv: true          # save output to CSV file
+  file_prefix: "CapacityPclNoSampling_res50" # prefix of the output CSV file name
+
+#----------------------------
+# R replacement - Rebased control totals settings
+#----------------------------
+rebased_targets:
+  input_file: control_id_working.xlsx    # city-level targets input file (in data_dir)
+  scale_to_ref: false                    # scale interpolated controls to regional reference projection
+  round_interpolated: false              # round interpolated values to integers
+  stepped_years: [2018, 2020, 2025, 2030, 2035, 2040, 2044, 2050] # years for stepped (5-year interval) output
+  output_targets_file: TargetsRebasedOutput.xlsx   # rebased targets workbook filename (in output_dir)
+  output_controls_file: Control-Totals-LUVit.xlsx  # interpolated control totals workbook filename (in output_dir)
+
+#----------------------------
+# R replacement - HCT split settings
+#----------------------------
+split_hct:
+  base_year_in_targets: null             # defaults to general base_year
+  parcel_base_year: 2018                 # MySQL parcel database year
+  controls_file: Control-Totals-LUVit.xlsx  # input control totals workbook (in output_dir, from rebased_targets step)
+  capacity_file: CapacityPclNoSampling_res50.csv  # parcel capacity CSV (in output_dir)
+  base_data_file: inputs/base_data_shares_2020.rda  # base data file (in data_dir)
+  creds_file: creds.txt                  # MySQL credentials file (in data_dir)
+  use_mysql: false                       # fetch base data from MySQL instead of file/pipeline
+  save_base_data_file: false             # persist MySQL-fetched base data to file
+  aggregate_no_growth_areas: false       # collapse no-growth geographies before splitting
+  round_interpolated: false              # round interpolated values to integers
+  save_results: true                     # write Excel output workbooks
+  max_iterations: 2000                   # max scaling iterations per indicator
+  stepped_years: null                    # years for stepped output; null = auto from base_year
+  trgshare:                              # regional TOD share targets by indicator (%)
+    HH: 65
+    Emp: 75
+  scenarios:                             # list of min non-HCT share by RG [metro, core, HCT]
+    - HH: [10, 10, 10]
+      Emp: [10, 10, 10]
+  step_values: [1, 0.5, 0.25]           # per-RG iteration step sizes
+
+#----------------------------
+# Census settings
+#----------------------------
+CensusKey: CENSUS_KEY # Environment variable name for Census API key
+
+census_year: 2020
+county_ids: [53033,53035,53053,53061]
+state_id: 53
+
+census_variables:
+  dec_total_pop: # name variable will be changed to
+    - P1_001N # variable code from census api
+  dec_units:
+    - H1_001N
+  dec_hh:
+    - H1_002N
+  dec_gq:
+    - P5_001N
+
+
+#----------------------------
+# Elmer settings
+#----------------------------
+# issues with pulling all columns from ElmerGeo, so columns need to be specified
+ElmerGeo: # database
+ - name: control_areas # name the table will be saved as in h5
+   sql_table: CONTROL18_DASHBOARD # table in elmer
+   columns: # columns to pull from elmer
+    - control_id
+    - control_na
+    - county_id
+   id_col: control_id # id column must be an integer
+
+ - name: blocks
+   sql_table: BLOCK2020
+   columns:
+      - geoid20
+   id_col: geoid20 # id column must be an integer
+
+ - name: parcel_pts_ofm
+   sql_table: PARCELS_URBANSIM_2018_PTS
+   columns:
+      - parcel_id
+   id_col: parcel_id # id column must be an integer
+
+#  - name: parcel_pts_current
+#    sql_table: PARCELS_URBANSIM_2023_PTS
+#    columns:
+#       - parcel_id
+#    id_col: parcel_id # id column must be an integer
+
+#  - name: regional_geographies
+#    sql_table: REGIONAL_GEOGRAPHIES
+#    columns: ['city_name','cnty_name','feat_type','juris','rgeo_class','class_desc']
+
+#  - name: county
+#    sql_table: COUNTY_BACKGROUND
+#    columns: 
+#     - county_fip
+#     - psrc
+
+#  - name: military_bases
+#    sql_table: MILITARY_BASES
+#    columns: ['milspn_id','name','psrc']
+
+#  - name: tribal_land
+#    sql_table: TRIBAL_LAND
+#    columns: ['tribal_land']
+
+#  - name: natural_resource
+#    sql_table: NAT_RESOURCE
+#    columns: ['resource']
+
+#  - name: national_forest
+#    sql_table: NATIONAL_FOREST
+#    columns: ['forest_name']
+
+#  - name: national_park
+#    sql_table: NATIONAL_PARK
+#    columns: ['park_name']
+
+#  - name: hct_stops
+#    sql_table: hct_vision_pts
+#    columns: ['brt','commuter_r','light_rail','ferry', 'rural'] # binary columns for whether stop is that transit type  
+
+#  - name: urban_centers
+#    sql_table: urban_centers
+#    columns: ['id', 'name'] 
+
+#  - name: uga
+#    sql_table: urban_growth_area 
+#    columns: ['county_name']
+
+#  - name: psrc_region
+#    sql_table: psrc_region
+#    columns: ['cnty_name', 'feat_type']
+
+ 
+# pull all columns for Elmer instead of specifying columns
+Elmer: # database
+ - name: ofm_parcelized_2018
+   sql_table: ofm.parcelized_saep(2024, 2018) # (vintage year, estimate year)
+   id_col: parcel_id # id column must be an integer
+
+ - name: ofm_parcelized_2019
+   sql_table: ofm.parcelized_saep(2024, 2019) # (vintage year, estimate year)
+   id_col: parcel_id # id column must be an integer
+
+ - name: ofm_parcelized_2020
+   sql_table: ofm.parcelized_saep(2024, 2020) # (vintage year, estimate year)
+   id_col: parcel_id # id column must be an integer
+
+
+#----------------------------
+# tables to be read in from data folder
+#----------------------------
+data_tables:
+ - name: control_target_xwalk
+   file: control_target_xwalk_legacy.csv
+
+#  - name: regional_geographies_xwalk
+#    file: regional_geographies_control_id_xwalk.csv
+
+#  - name: military_bases_xwalk
+#    file: military_bases_control_id_xwalk.csv
+
+ - name: ref_projection
+   file: REF_projection.csv
+
+ - name: employment_2018_by_control_area
+   file: Employment 2018_legacy.csv
+
+ - name: employment_2019_by_control_area
+   file: Employment 2019_legacy.csv
+
+ - name: employment_2020_by_control_area
+   file: Employment 2020_legacy.csv
+
+targets_tables:
+ - name: king_targets
+   file: King Growth Targets 2021.csv
+   units_chg_col: 2019-2044 Housing Target
+   emp_chg_col: 2019-2044 Job Target
+   units_chg_start: 2019
+   emp_chg_start: 2019
+
+ - name: kitsap_targets
+   file: Kitsap Growth Targets 2021.csv
+   total_pop_chg_col: 2020-2044 Population Growth
+   emp_chg_col: 2020-2044 Employment Growth
+   total_pop_chg_start: 2020
+   emp_chg_start: 2020
+
+ - name: pierce_targets
+   file: Pierce Growth Targets 2021.csv
+   total_pop_chg_col: 2020-2044 Population Growth
+   emp_chg_col: 2020-2044 Employment Growth
+   total_pop_chg_start: 2020
+   emp_chg_start: 2020
+
+ - name: snohomish_targets
+   file: Snohomish Growth Targets 2021.csv
+   total_pop_chg_col: Population Chg 2020-44
+   emp_chg_col: Employment Chg 2019-44
+   total_pop_chg_start: 2020
+   emp_chg_start: 2019
+
+# network location for saving backup of input tables, any needed tables not in /data will be copied from here
+tables_backup_dir: J:/Projects/LandUseVision/LUV.3/Control_totals/ProcessUpdatePython2026Inputs
+
+#----------------------------
+# shapefiles to be read in from data/shapefiles folder
+#----------------------------
+shapefiles:
+#  - name: regional_geography
+#    file: reggeog_22_allnames_edit.shp
+#    id_col: RGid_22
+
+
+#----------------------------
+# Pypyr steps
+#----------------------------
+steps:
+# data loading and geoprocessing steps
+#  - control_totals.steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
+#  - control_totals.steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
+#  - control_totals.steps.data_loading.load_data # loads data from csv files into hdf5
+#  - control_totals.steps.data_loading.get_census_data # pulls decennial census data from api and saves to hdf5
+#  - control_totals.steps.geoprocessing.block_control_area_xwalk # creates block to control area crosswalk
+#  - control_totals.steps.geoprocessing.ofm_parcel_control_area_xwalk # creates parcel to control area crosswalk
+#  - control_totals.steps.data_loading.prepare_parcel_data # aggregates parcel data to control area
+#  - control_totals.steps.data_loading.prepare_block_data # aggregates decennial block data to control area
+
+# target calculations
+#  - control_totals.steps.adjust_targets_to_base_year # adjusts targets to base year using ofm and employment data
+#  - control_totals.steps.king_cnty_targets # calculates targets that use housing unit change (only king county for now)
+#  - control_totals.steps.total_pop_chg_targets # calculates targets that use total population change
+#  - control_totals.steps.emp_chg_targets_res_con # calculates targets for counties that include resource and construction employment
+#  - control_totals.steps.emp_chg_targets_no_res_con # calculates targets for counties that exclude resource and construction employment
+#  - control_totals.steps.extrapolate_to_controls_year # extrapolates out to the control totals end year from the targets end year
+#  - control_totals.steps.legacy.create_controls # creates final control totals table by bringing in the non-growth areas
+
+# replacement for R scripts
+#  - control_totals.steps.parcels_capacity
+ - control_totals.steps.load_split_hct_base_data
+ - control_totals.steps.create_control_totals_rebased_targets
+ - control_totals.steps.split_ct_to_hct

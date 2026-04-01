@@ -1,0 +1,57 @@
+target_id,cnty_targets_juris,2019-2044 Housing Target,2019-2044 Job Target
+1,Bellevue,35000,70000
+2,Seattle,112000,169500
+3,Auburn,12000,19520
+4,Bothell,5800,9500
+5,Burien,7500,4770
+6,Federal Way,11260,20460
+7,Issaquah,3500,7950
+8,Kent,10200,32000
+9,Kirkland,13200,26490
+10,Redmond,20000,24000
+11,Renton,17000,31780
+12,SeaTac,5900,14810
+13,Tukwila,6500,15890
+14,Des Moines,3800,2380
+15,Federal Way PAA,1020,720
+16,Kenmore,3070,3200
+17,Lake Forest Park,870,550
+18,Mercer Island,1239,1300
+19,Newcastle,1480,500
+20,North Highline PAA,1420,1220
+22,Renton PAA - East Renton,170,0
+23,Renton PAA - Fairwood,840,100
+24,Renton PAA - Skyway/West Hill,670,600
+25,Shoreline,13330,10000
+26,Woodinville,2033,5000
+27,Algona,170,325
+28,Beaux Arts,1,0
+29,Black Diamond,2900,680
+30,Carnation,799,450
+31,Clyde Hill,10,10
+32,Covington,4310,4496
+33,Duvall,890,990
+34,Enumclaw,1057,989
+35,Hunts Point,1,0
+36,Maple Valley,1720,1570
+37,Medina,19,0
+38,Milton,50,900
+39,Normandy Park,153,35
+40,North Bend,1748,2218
+41,Pacific,135,75
+42,Sammamish,2007,305
+43,Skykomish,10,0
+44,Snoqualmie,1500,4425
+45,Yarrow Point,10,0
+46,Auburn PAA,12,0
+48,Bellevue PAA,17,0
+49,Black Diamond PAA,328,0
+51,Issaquah PAA,35,0
+52,Kent PAA,3,300
+53,Unaffiliated Urban Unincorporated,448,400
+57,Newcastle PAA,1,0
+58,Pacific PAA,134,0
+60,Redmond PAA,120,0
+61,Sammamish PAA,194,0
+62,not included in cnty targets,0,0
+64,Rural,4211,0
