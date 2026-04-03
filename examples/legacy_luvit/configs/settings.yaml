@@ -313,13 +313,13 @@ steps:
 # - control_totals.steps.legacy.prepare_ofm_block_data # aggregates OFM block data to control area
 
 # target calculations
- - control_totals.steps.legacy.adjust_targets_to_decennial # adjusts targets to 2020
+#  - control_totals.steps.legacy.adjust_targets_to_decennial # adjusts targets to 2020
 #  - control_totals.steps.king_cnty_targets # calculates targets that use housing unit change (only king county for now)
 #  - control_totals.steps.total_pop_chg_targets # calculates targets that use total population change
 #  - control_totals.steps.emp_chg_targets_res_con # calculates targets for counties that include resource and construction employment
 #  - control_totals.steps.emp_chg_targets_no_res_con # calculates targets for counties that exclude resource and construction employment
 #  - control_totals.steps.extrapolate_to_controls_year # extrapolates out to the control totals end year from the targets end year
-#  - control_totals.steps.legacy.create_controls # creates final control totals table by bringing in the non-growth areas
+ - control_totals.steps.legacy.create_controls # creates final control totals table by bringing in the non-growth areas
 
 # R scripts
 #  - control_totals.steps.legacy.run_parcel_capacity_r_script # runs r script to create parcel capacity files used by Hana's R scripts

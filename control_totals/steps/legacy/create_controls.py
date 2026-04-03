@@ -40,14 +40,14 @@ def load_tables(pipeline):
     targets = p.get_table('extrapolated_targets')[target_cols].set_index('target_id').astype(float).reset_index()
     # load control area to target xwalk
     xwalk = p.get_table('control_target_xwalk')
-    # load base year ofm data
-    base_ofm = p.get_table(f'ofm_parcelized_{base_year}_by_control_area')
+    # load base year dec data
+    dec = p.get_table(f'decennial_by_control_area')
     # load base year employment data
     base_emp = p.get_table(f'employment_{base_year}_by_control_area')
     # merge all tables together
     df = (
         xwalk
-        .merge(base_ofm, on='control_id', how='left').drop(columns='control_name', errors='ignore')
+        .merge(dec, on='control_id', how='left').drop(columns='control_name', errors='ignore')
         .merge(base_emp, on='control_id', how='left').drop(columns='control_name', errors='ignore')
         .merge(targets, on='target_id', how='left')
     )
@@ -77,10 +77,10 @@ def recalc_excluded_control_areas(pipeline, df):
     mask = df['exclude_from_target'] == 1
     # left is horizon year column name, right is base year column name
     updates = {
-    'total_pop': 'ofm_total_pop',
-    'hhpop': 'ofm_hhpop',
-    'gq': 'ofm_gq',
-    'hh': 'ofm_hh',
+    'total_pop': 'dec_total_pop',
+    'hhpop': 'dec_hhpop',
+    'gq': 'dec_gq',
+    'hh': 'dec_hh',
     'emp': f'Emp_TotNoMil',
     }
     # for each horizon year and for each column above, set the value to equal base year value
@@ -125,14 +125,22 @@ def save_r_scrpt_inputs(pipeline, control_totals_df):
     rename_cols_2020 = {
         'rgid': 'RGID',
         'target_name': 'name',
-        'ofm_total_pop': 'TotPop20',
-        'ofm_hhpop': 'HHpop20',
-        'ofm_hh': 'HH20',
-        'ofm_gq': 'GQ20',
-        'ofm_units': 'Units20',
+        'dec_total_pop': 'TotPop20',
+        'dec_hhpop': 'HHpop20',
+        'dec_hh': 'HH20',
+        'dec_gq': 'GQ20',
+        'dec_units': 'Units20',
         'Emp_TotNoMil': 'TotEmp20_wCRnoMil',
+        'total_pop_2044': 'TotPop44',
         'total_pop_2050': 'TotPop50',
-        'emp_2050': 'TotEmp50_wCRnoMil'
+        'hhpop_2044': 'HHpop44',
+        'hhpop_2050': 'HHpop50',
+        'hh_2044': 'HH44',
+        'hh_2050': 'HH50',
+        'gq_2044': 'GQ44',
+        'gq_2050': 'GQ50',
+        'emp_2044': 'TotEmp44_wCRnoMil',
+        'emp_2050': 'TotEmp50_wCRnoMil',
     }
     df = (
         control_totals_df
@@ -144,8 +152,8 @@ def save_r_scrpt_inputs(pipeline, control_totals_df):
     # calculate additional columns needed for r script
     df['TotEmpTrg_wCRnoMil'] = df['TotEmp50_wCRnoMil'] - df['TotEmp20_wCRnoMil']
     df['TotPopTrg'] = df['TotPop50'] - df['TotPop20']
-    df['GQpct50'] = (df['gq_2050'] / df['TotPop50']).fillna(0).replace([float('inf'), -float('inf')], 0)
-    df['PPH50'] = (df['hhpop_2050'] / df['hh_2050']).fillna(0).replace([float('inf'), -float('inf')], 0)
+    df['GQpct50'] = (df['GQ50'] / df['TotPop50']).fillna(0).replace([float('inf'), -float('inf')], 0)
+    df['PPH50'] = (df['HHpop50'] / df['HH50']).fillna(0).replace([float('inf'), -float('inf')], 0)
     # take last 2 digits of county id
     df['county_id'] = df['county_id'].astype(str).str[-2:].astype(int)
     # export final table to excel for r script input
