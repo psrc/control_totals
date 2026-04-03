@@ -1,5 +1,5 @@
 import pandas as pd
-from util import Pipeline
+from control_totals.util import Pipeline
 
 def get_ofm_block_years(pipeline):
     block_data_years = []

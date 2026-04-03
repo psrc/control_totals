@@ -1,8 +1,11 @@
 import pandas as pd
-from util import Pipeline
+from control_totals.util import Pipeline
 
+def filter_emp_targets_by_type(pipeline,df,emp_target_type):
+    county_ids = pipeline.settings['emp_target_types'][emp_target_type]
+    return df[df['county_id'].isin(county_ids)]
 
-def combine_targets(pipeline, target_type):
+def combine_targets(pipeline, target_type, emp_target_type=None):
     """Combine growth-change targets from all county target tables for a given type.
 
     Reads each target table listed in the pipeline settings that contains a
@@ -28,6 +31,10 @@ def combine_targets(pipeline, target_type):
             df_table['start'] = table[f'{target_type}_chg_start']
 
             df = pd.concat([df, df_table], ignore_index=True)
+
+    if target_type == 'emp' and emp_target_type is not None:
+        df = filter_emp_targets_by_type(pipeline, df, emp_target_type)
+
     return df[['target_id', f'{target_type}_chg', 'start']]
 
 
@@ -130,14 +137,13 @@ def get_decennial_by_control_area(pipeline):
     )
     return dec
 
-def adjust_targets(pipeline, target_type, table):
+def adjust_targets(pipeline, target_type, table, emp_target_type=None):
     """Adjust growth-change targets to the base year.
 
     Computes the change between each target's original start year and the
     global base year using OFM or employment estimates, then subtracts
     that change from the raw target to produce an adjusted target. Saves
     the result to the pipeline HDF5 store.
-
     Args:
         pipeline (Pipeline): The data pipeline providing access to settings
             and stored tables.
@@ -151,7 +157,7 @@ def adjust_targets(pipeline, target_type, table):
     base_year = p.settings['base_year']
 
     # combine county targets
-    df = combine_targets(p, target_type)
+    df = combine_targets(p, target_type, emp_target_type)
 
     # get unique start years in the targets
     start_years = df['start'].unique().tolist()
@@ -176,6 +182,9 @@ def adjust_targets(pipeline, target_type, table):
         base_col = f'{target_type}_{base_year}'
         est_chg_col = f'est_{target_type}_chg'
         df.at[index, est_chg_col] = row[base_col] - row[start_col]
+        if row['target_id'] == 176:
+            print(f"{target_type} Target ID 176: start={start}, {start_col}={row[start_col]}, {base_col}={row[base_col]}, {est_chg_col}={df.at[index, est_chg_col]}")
+
 
     chg_adj_col = f'{target_type}_chg_adj'
     chg_col = f'{target_type}_chg'
@@ -190,6 +199,8 @@ def adjust_targets(pipeline, target_type, table):
 
     # save adjusted targets table
     table_name = f'adjusted_{target_type}_change_targets'
+    if target_type == 'emp' and emp_target_type is not None:
+        table_name = f'{table_name}_{emp_target_type}'
     out_df = df[['target_id','start',chg_col,chg_adj_col]]
     p.save_table(table_name,out_df)
 
@@ -214,5 +225,5 @@ def run_step(context):
     print("Adjusting total population targets to base year...")
     adjust_targets(p,'total_pop','ofm_block')
     print("Adjusting employment targets to base year...")
-    adjust_targets(p,'emp','employment')
+    adjust_targets(p,'emp','employment','res_con')
     return context

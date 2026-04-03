@@ -65,13 +65,17 @@ king_hhpop_2044: 2828620 # target household population for king county in 2044
 # Employment settings
 #----------------------------
 emp_target_types:
-  includes res con: [53035, 53053] # Kitsap and Pierce targets include resource and construction employment
-  excludes res con: [53033, 53061] # King, Snohomish targets do not include resource and construction employment
+  res_con: [53035, 53053] # Kitsap and Pierce targets include resource and construction employment
+  no_res_con: [53033, 53061] # King, Snohomish targets do not include resource and construction employment
 
 res_con_emp_growth_pct: 0.028 # percentage of employment growth from resource and construction
                               # ussed to adjust King and Snohomish employment growth targets since they 
                               # exclude resource and construction employment. Originally based on REF
                               # projections, will need to be updated, possibly with REMI
+
+resource_construction_emp_targets:
+  53033: 13800
+  53061: 4130
 
 #----------------------------
 # Rebased control totals settings
@@ -310,15 +314,15 @@ steps:
 #  - control_totals.steps.geoprocessing.parcel_control_area_xwalks # creates parcel to control area crosswalk
 #  - control_totals.steps.data_loading.prepare_parcel_data # aggregates parcel data to control area
 #  - control_totals.steps.data_loading.prepare_block_data # aggregates decennial block data to control area
-# - control_totals.steps.legacy.prepare_ofm_block_data # aggregates OFM block data to control area
+#  - control_totals.steps.legacy.prepare_ofm_block_data # aggregates OFM block data to control area
 
 # target calculations
-#  - control_totals.steps.legacy.adjust_targets_to_decennial # adjusts targets to 2020
-#  - control_totals.steps.king_cnty_targets # calculates targets that use housing unit change (only king county for now)
-#  - control_totals.steps.total_pop_chg_targets # calculates targets that use total population change
-#  - control_totals.steps.emp_chg_targets_res_con # calculates targets for counties that include resource and construction employment
-#  - control_totals.steps.emp_chg_targets_no_res_con # calculates targets for counties that exclude resource and construction employment
-#  - control_totals.steps.extrapolate_to_controls_year # extrapolates out to the control totals end year from the targets end year
+ - control_totals.steps.legacy.adjust_targets_to_decennial # adjusts targets to 2020 (including emp targets w/ resource and construction)
+ - control_totals.steps.legacy.adjust_emp_targets_no_res_con_to_base_year # adjusts employment targets that exclude resource and construction employment to the base year
+ - control_totals.steps.king_cnty_targets # calculates targets that use housing unit change (only king county for now)
+ - control_totals.steps.total_pop_chg_targets # calculates targets that use total population change
+ - control_totals.steps.legacy.emp_chg_targets
+ - control_totals.steps.legacy.extrapolate_to_controls_year # extrapolates out to the control totals end year from the targets end year
  - control_totals.steps.legacy.create_controls # creates final control totals table by bringing in the non-growth areas
 
 # R scripts

@@ -1,5 +1,5 @@
 import pandas as pd
-from util import Pipeline, load_base_year_emp
+from control_totals.util import Pipeline, load_base_year_emp
 
 
 def load_targets(pipeline):
@@ -17,9 +17,9 @@ def load_targets(pipeline):
             employment changes, and base-year employment figures.
     """
     p = pipeline
-    emp = load_base_year_emp(p,'excludes res con')
+    emp = load_base_year_emp(p,'no_res_con')
     df = (
-        p.get_table('adjusted_emp_change_targets')
+        p.get_table('adjusted_emp_change_targets_no_res_con')
         .merge(emp, on='target_id', how='inner')
     )
     return df
@@ -89,5 +89,5 @@ def run_step(context):
     p = Pipeline(settings_path=context['configs_dir'])
     print('Calculating targets for counties that exclude resource and construction employment...')
     df = calc_targets(p)
-    p.save_table('adjusted_emp_change_targets_no_res_con', df)
+    p.save_table('adjusted_emp_change_targets_no_res_con_calculations', df)
     return context

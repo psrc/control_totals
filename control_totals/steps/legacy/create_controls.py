@@ -1,6 +1,6 @@
 import pandas as pd
 from pathlib import Path
-from util import Pipeline
+from control_totals.util import Pipeline
 
 
 def load_tables(pipeline):
@@ -89,6 +89,30 @@ def recalc_excluded_control_areas(pipeline, df):
         for prefix, src in updates.items():
             df.loc[mask, f'{prefix}_{year}'] = df.loc[mask, src]
 
+    # subtract excluded-area values from sibling controls that share a target_id
+    excluded_controls = df.loc[mask, 'control_id'].values
+    excluded_targets = df.loc[df['control_id'].isin(excluded_controls), 'target_id'].values
+
+    prefixes = ['hh', 'total_pop', 'gq', 'hhpop', 'emp']
+    subtract_cols = [f'{p}_{y}' for y in [targets_end_year, controls_end_year] for p in prefixes]
+
+    excluded = df['control_id'].isin(excluded_controls)
+    in_target = df['target_id'].isin(excluded_targets)
+
+    no_growth_df = (
+        df.loc[excluded, ['target_id'] + subtract_cols]
+        .groupby('target_id').sum()
+    )
+    subtracted_df = (
+        df.loc[in_target & ~excluded, ['control_id'] + subtract_cols]
+        .set_index('control_id')
+        .subtract(no_growth_df)
+        .dropna()
+    )
+
+    df = df.set_index('control_id')
+    df.loc[subtracted_df.index, subtract_cols] = subtracted_df
+    df = df.reset_index()
     return df
 
 def save_r_scrpt_inputs(pipeline, control_totals_df):
