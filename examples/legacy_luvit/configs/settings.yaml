@@ -62,6 +62,20 @@ king_hhpop_2044: 2828620 # target household population for king county in 2044
                          # replace with calculated value in the future
 
 #----------------------------
+# Snohomish Settings
+#----------------------------
+# Another hardcoded total. Used in Targets Work tab, Column BU 
+snohomish_emp_target_totals: # total target year emp by rgid
+  1: 164981 
+  2: 78069 
+  3: 152580 
+  4: 42888 
+  5: 22350 
+  6: 30260 
+
+
+
+#----------------------------
 # Employment settings
 #----------------------------
 emp_target_types:
@@ -73,9 +87,13 @@ res_con_emp_growth_pct: 0.028 # percentage of employment growth from resource an
                               # exclude resource and construction employment. Originally based on REF
                               # projections, will need to be updated, possibly with REMI
 
+# hard coded total resource and construction employment by county
 resource_construction_emp_targets:
   53033: 13800
   53061: 4130
+
+emp_target_overrides:
+  210: 1296 # hard coded Tulalip emp target override 
 
 #----------------------------
 # Rebased control totals settings
@@ -242,6 +260,9 @@ data_tables:
  - name: control_target_xwalk
    file: control_target_xwalk_legacy.csv
 
+ - name: target_rgid_xwalk
+   file: target_rgid_xwalk.csv
+
 #  - name: regional_geographies_xwalk
 #    file: regional_geographies_control_id_xwalk.csv
 
@@ -308,7 +329,7 @@ steps:
 # data loading and geoprocessing steps
 #  - control_totals.steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
 #  - control_totals.steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
-#  - control_totals.steps.data_loading.load_data # loads data from csv files into hdf5
+ - control_totals.steps.data_loading.load_data # loads data from csv files into hdf5
 #  - control_totals.steps.data_loading.get_census_data # pulls decennial census data from api and saves to hdf5
 #  - control_totals.steps.geoprocessing.block_control_area_xwalk # creates block to control area crosswalk
 #  - control_totals.steps.geoprocessing.parcel_control_area_xwalks # creates parcel to control area crosswalk
@@ -322,6 +343,7 @@ steps:
  - control_totals.steps.king_cnty_targets # calculates targets that use housing unit change (only king county for now)
  - control_totals.steps.total_pop_chg_targets # calculates targets that use total population change
  - control_totals.steps.legacy.emp_chg_targets
+ - control_totals.steps.legacy.adjust_snohomish_emp_targets_by_rgid
  - control_totals.steps.legacy.extrapolate_to_controls_year # extrapolates out to the control totals end year from the targets end year
  - control_totals.steps.legacy.create_controls # creates final control totals table by bringing in the non-growth areas
 

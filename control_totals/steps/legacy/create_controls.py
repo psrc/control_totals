@@ -70,6 +70,7 @@ def recalc_excluded_control_areas(pipeline, df):
         pandas.DataFrame: Updated DataFrame with excluded areas reset.
     """
     p = pipeline
+    base_year = p.settings['base_year']
     targets_end_year = p.settings['targets_end_year']
     controls_end_year = p.settings['end_year']
     
@@ -88,6 +89,15 @@ def recalc_excluded_control_areas(pipeline, df):
     for year in [targets_end_year, controls_end_year]:
         for prefix, src in updates.items():
             df.loc[mask, f'{prefix}_{year}'] = df.loc[mask, src]
+
+    # apply any hard-coded employment target overrides from settings
+    emp_overrides = p.settings.get('emp_target_overrides', {})
+    for control_id, emp_target in emp_overrides.items():
+        # add override target to base year emp
+        df.loc[df['control_id'] == control_id, f'emp_{targets_end_year}'] = emp_target + df.loc[df['control_id'] == control_id, f'Emp_TotNoMil']
+        # extrapolate override taret out to controls end year
+        extrap_denominator = (targets_end_year - base_year) * (controls_end_year - targets_end_year)
+        df.loc[df['control_id'] == control_id, f'emp_{controls_end_year}'] = emp_target / extrap_denominator + df.loc[df['control_id'] == control_id, f'emp_{targets_end_year}']
 
     # subtract excluded-area values from sibling controls that share a target_id
     excluded_controls = df.loc[mask, 'control_id'].values

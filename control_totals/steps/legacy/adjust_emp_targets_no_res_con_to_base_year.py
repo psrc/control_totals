@@ -123,7 +123,8 @@ def adjust_targets(pipeline):
         # otherwise use the adjusted employment change
         emp_chg_adj = df['emp_chg'] - df['emp_chg_no_military'] + df['res_con_chg_norm']
         df['emp_chg_adj'] = np.where(emp_chg_adj < 0, df['emp_chg'], emp_chg_adj)
-        df['emp_chg_adj'] = df['emp_chg_adj'].fillna(0)
+        # revert nulls back to original employment target
+        df.loc[df['emp_chg_adj'].isna(), 'emp_chg_adj'] = df.loc[df['emp_chg_adj'].isna(), 'emp_chg'] 
         # append the adjusted targets for this start year to the output dataframe
         df_out = pd.concat([df_out, df[['target_id','start','emp_chg','emp_chg_adj']]], ignore_index=True)
 

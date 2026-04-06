@@ -51,7 +51,7 @@ def calc_targets(pipeline):
     emp_end_year_col = f'emp_{end_year}'
     emp_no_mil_base_year_col = f'Emp_TotNoMil_{base_year}'
 
-    df[emp_end_year_col] = (df[emp_no_mil_base_year_col] + df['emp_chg_adj']).round(0).astype(int)
+    df[emp_end_year_col] = (df[emp_no_mil_base_year_col] + df['emp_chg_adj'])
 
     return df
 
