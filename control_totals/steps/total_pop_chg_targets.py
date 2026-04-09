@@ -15,10 +15,10 @@ def calc_dec_hhsz(dec):
     return dec['dec_hhpop'].sum() / dec['dec_hh'].sum()
 
 def calc_ref_horizon_hhsz(pipeline):
-    """Calculate the reference-projection household size at the targets horizon year.
+    """Calculate the REF projection household size at the targets horizon year.
 
-    Reads the regional reference projection table and divides household
-    population by households for the configured targets end year.
+    Reads the Regional Economic Forecast (REF) projection table and divides
+    household population by households for the configured targets end year.
 
     Args:
         pipeline (Pipeline): The data pipeline providing access to settings
@@ -45,7 +45,7 @@ def calc_horizon_hhsz(df, dec_hhsz, ref_hhsz, hhsz_horizon_col):
         df (pandas.DataFrame): Target-area DataFrame containing a
             ``dec_hhsz`` column.
         dec_hhsz (float): The region-wide decennial household size.
-        ref_hhsz (float): The reference-projection household size at the
+        ref_hhsz (float): The REF projection household size at the
             horizon year.
         hhsz_horizon_col (str): The name of the output column to create.
 

@@ -1,5 +1,5 @@
 import pandas as pd
-from util import Pipeline, calc_gq
+from control_totals.util import Pipeline, calc_gq
 
 def filter_targets_type(p, df, target_type):
     """Filter a targets DataFrame to counties that use a given target type.
@@ -46,6 +46,13 @@ def maybe_load_adjusted_targets(p, table_name, target_type):
     df = p.get_table(table_name)
     return filter_targets_type(p, df, target_type)
 
+def summarize_ofm_to_target_areas(pipeline):
+    base_year = pipeline.settings["base_year"]
+    ofm = pipeline.get_table(f'ofm_parcelized_{base_year}_by_control_area')
+    xwalk = pipeline.get_table('control_target_xwalk')[['target_id','control_id']]
+    ofm = ofm.merge(xwalk, on='control_id', how='left')
+    return ofm.groupby('target_id').sum().reset_index().drop(columns=['control_id'], errors='ignore')
+
 def load_targets_tables(pipeline):
     """Load and merge all adjusted population, housing, and employment targets.
 
@@ -72,7 +79,7 @@ def load_targets_tables(pipeline):
         target_frames.append(pop_change_targets)
 
     unit_change_targets = maybe_load_adjusted_targets(
-        p, 'adjusted_unit_change_targets', 'unit_chg'
+        p, 'adjusted_units_change_targets', 'unit_chg'
     )
     if unit_change_targets is not None:
         target_frames.append(unit_change_targets)
@@ -80,6 +87,8 @@ def load_targets_tables(pipeline):
     # if king county method is specified, bring in those targets as well
     if p.settings['target_types']['king_cnty_method']:
         king_targets = p.get_table('adjusted_king_targets')
+        ofm = summarize_ofm_to_target_areas(p)
+        king_targets = king_targets.merge(ofm, on='target_id', how='left')
         target_frames.append(king_targets)
 
     if target_frames:
@@ -124,7 +133,7 @@ def extrapolate_target(pipeline, df, col):
     if col == 'emp':
         base_col = f'Emp_TotNoMil_{base_year}'
     else:
-        base_col = f'dec_{col}'
+        base_col = f'ofm_{col}'
     target_col = f'{col}_{targets_end_year}'
     df[annual_change_col] = (df[target_col] - df[base_col]) / years_to_target
     control_col = f'{col}_{controls_end_year}'

@@ -24,13 +24,14 @@ def create_parcel_control_area_xwalk(parcel_pts, control_areas):
     # uses sjoin_nearest to handle edge cases where centroids fall just outside control areas
     parcel_join = parcel_pts.sjoin(control_areas, how = 'left').drop(columns=['index_right'])
     # copy parcel points that didn't join to a control area
-    missing_control_id = parcel_join.loc[parcel_join['control_id'].isna()].copy().drop(columns=['control_id'])
-    # use spatial join nearest to assign control_id based on nearest control area
-    missing_control_id = missing_control_id.sjoin_nearest(control_areas).drop(columns=['index_right'])
-    # drop parcels that didn't join to a control area
-    parcel_join = parcel_join.loc[~parcel_join['control_id'].isna()].copy()
-    # combine parcels that joined to a control area with those that were assigned a control area based on nearest
-    parcel_out = pd.concat([parcel_join[['parcel_id','control_id']], missing_control_id[['parcel_id','control_id']]], ignore_index=True)
+    if parcel_join['control_id'].isna().any():
+        missing_control_id = parcel_join.loc[parcel_join['control_id'].isna()].copy().drop(columns=['control_id'])
+        # use spatial join nearest to assign control_id based on nearest control area
+        missing_control_id = missing_control_id.sjoin_nearest(control_areas).drop(columns=['index_right'])
+        # drop parcels that didn't join to a control area
+        parcel_join = parcel_join.loc[~parcel_join['control_id'].isna()].copy()
+        # combine parcels that joined to a control area with those that were assigned a control area based on nearest
+        parcel_out = pd.concat([parcel_join[['parcel_id','control_id']], missing_control_id[['parcel_id','control_id']]], ignore_index=True)
     parcel_out['control_id'] = parcel_out['control_id'].astype(int)
 
     return parcel_out
@@ -58,9 +59,8 @@ def run_step(context):
     # create crosswalk between ofm year parcels and control areas, then save to h5
     ofm_parcels = create_parcel_control_area_xwalk(parcel_pts_ofm, control_areas)
     p.save_table('ofm_parcel_control_area_xwalk', ofm_parcels)
-    if 'parcel_pts_current' in p.get_elmer_geo_names():
-        # load current year parcels geodataframe from h5
-        parcel_pts_current = p.get_geodataframe('parcels_hct')
-        current_parcels = create_parcel_control_area_xwalk(parcel_pts_current, control_areas)
-        p.save_table('current_parcel_control_area_xwalk', current_parcels)
+    # save current year parcel crosswalk, control_id already spatially joined in hct step
+    if p.check_table_exists('parcels_hct'):
+        current_parcels = p.get_geodataframe('parcels_hct')
+        p.save_table('current_parcel_control_area_xwalk', current_parcels[['parcel_id','subreg_id','control_id']])
     return context

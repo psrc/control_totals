@@ -225,8 +225,7 @@ def finalize_targets(df_incorp, df_unincorp, cols):
     """
     df_out = pd.concat([df_incorp, df_unincorp], ignore_index=True)
     keep_cols = [
-        'target_id', 'name', 'HousingJuris', 'total_pop_chg', 'units_chg', 'emp_chg',
-        cols['total_pop_target_col'], cols['units_target_col'], cols['emp_target_col']
+        'target_id', 'name', 'HousingJuris', 'total_pop_chg', 'units_chg', 'emp_chg'
     ]
     df_out = df_out[keep_cols]
     return df_out
@@ -274,5 +273,5 @@ def run_step(context):
     targets_year = p.settings['targets_end_year']
     df = load_tables(p, start_year)
     df = split_housing_growth_targets(p, df, targets_year)
-    p.save_table('kitsap_targets',df)
+    p.save_table('kitsap_targets',df[['target_id','name','total_pop_chg','units_chg','emp_chg']])
     return context

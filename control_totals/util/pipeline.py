@@ -94,6 +94,14 @@ class Pipeline:
         gdf = gpd.GeoDataFrame(df, geometry='geometry', crs=crs)
         gdf = gdf.drop(columns=['geometry_wkt'])
         return gdf
+    
+    def check_table_exists(self, table_name):
+        with pd.HDFStore(self.get_hdf5_path()) as store:
+            tables = store.keys()
+        if f'/{table_name}' in tables:
+            return True
+        else:
+            return False
 
     def fill_nan_values(self, df):
         if 'nan_fill' in self.settings:

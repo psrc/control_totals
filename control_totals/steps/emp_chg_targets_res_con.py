@@ -16,7 +16,7 @@ def load_targets(pipeline):
             employment changes, and base-year employment figures.
     """
     p = pipeline
-    emp = load_base_year_emp(p,'includes res con')
+    emp = load_base_year_emp(p,'res_con')
     df = (
         p.get_table('adjusted_emp_change_targets')
         .merge(emp, on='target_id', how='inner')

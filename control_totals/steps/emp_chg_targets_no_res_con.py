@@ -19,7 +19,7 @@ def load_targets(pipeline):
     p = pipeline
     emp = load_base_year_emp(p,'no_res_con')
     df = (
-        p.get_table('adjusted_emp_change_targets_no_res_con')
+        p.get_table('adjusted_emp_change_targets')
         .merge(emp, on='target_id', how='inner')
     )
     return df
@@ -89,5 +89,5 @@ def run_step(context):
     p = Pipeline(settings_path=context['configs_dir'])
     print('Calculating targets for counties that exclude resource and construction employment...')
     df = calc_targets(p)
-    p.save_table('adjusted_emp_change_targets_no_res_con_calculations', df)
+    p.save_table('adjusted_emp_change_targets_no_res_con', df)
     return context

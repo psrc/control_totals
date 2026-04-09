@@ -327,15 +327,15 @@ shapefiles:
 #----------------------------
 steps:
 # data loading and geoprocessing steps
-#  - control_totals.steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
-#  - control_totals.steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
+ - control_totals.steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
+ - control_totals.steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
  - control_totals.steps.data_loading.load_data # loads data from csv files into hdf5
-#  - control_totals.steps.data_loading.get_census_data # pulls decennial census data from api and saves to hdf5
-#  - control_totals.steps.geoprocessing.block_control_area_xwalk # creates block to control area crosswalk
-#  - control_totals.steps.geoprocessing.parcel_control_area_xwalks # creates parcel to control area crosswalk
-#  - control_totals.steps.data_loading.prepare_parcel_data # aggregates parcel data to control area
-#  - control_totals.steps.data_loading.prepare_block_data # aggregates decennial block data to control area
-#  - control_totals.steps.legacy.prepare_ofm_block_data # aggregates OFM block data to control area
+ - control_totals.steps.data_loading.get_census_data # pulls decennial census data from api and saves to hdf5
+ - control_totals.steps.geoprocessing.block_control_area_xwalk # creates block to control area crosswalk
+ - control_totals.steps.geoprocessing.parcel_control_area_xwalks # creates parcel to control area crosswalk
+ - control_totals.steps.data_loading.prepare_parcel_data # aggregates parcel data to control area
+ - control_totals.steps.data_loading.prepare_block_data # aggregates decennial block data to control area
+ - control_totals.steps.legacy.prepare_ofm_block_data # aggregates OFM block data to control area
 
 # target calculations
  - control_totals.steps.legacy.adjust_targets_to_decennial # adjusts targets to 2020 (including emp targets w/ resource and construction)
@@ -345,8 +345,8 @@ steps:
  - control_totals.steps.legacy.emp_chg_targets
  - control_totals.steps.legacy.adjust_snohomish_emp_targets_by_rgid
  - control_totals.steps.legacy.extrapolate_to_controls_year # extrapolates out to the control totals end year from the targets end year
- - control_totals.steps.legacy.create_controls # creates final control totals table by bringing in the non-growth areas
+ - control_totals.steps.legacy.create_controls_legacy # creates final control totals table by bringing in the non-growth areas
 
 # R scripts
-#  - control_totals.steps.legacy.run_parcel_capacity_r_script # runs r script to create parcel capacity files used by Hana's R scripts
-#  - control_totals.steps.legacy.run_r_scripts # runs r scripts to create interpolate interim contols totals years
+ - control_totals.steps.legacy.run_parcel_capacity_r_script # runs r script to create parcel capacity files used by Hana's R scripts
+ - control_totals.steps.legacy.run_r_scripts # runs r scripts to create interpolate interim contols totals years

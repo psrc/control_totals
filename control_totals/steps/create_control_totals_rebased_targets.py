@@ -39,9 +39,9 @@ def _extract_years(columns, pattern):
 
 
 def _infer_years(city_data):
-	"""Infer the reference base year, base year, and target year from column names.
+	"""Infer the REF base year, base year, and target year from column names.
 
-	Scans for ``Pop##`` (reference base year) and ``TotPop##`` (base and
+	Scans for ``Pop##`` (REF base year) and ``TotPop##`` (base and
 	target years) columns in the input city data.
 
 	Args:
@@ -97,13 +97,13 @@ def load_city_data(pipeline):
 def build_rebased_targets(city_data, ref_base_year, base_year, target_year):
 	"""Build rebased growth targets from raw city-level control-totals input.
 
-	Extracts and renames employment and population columns for the reference
+	Extracts and renames employment and population columns for the REF
 	base year, base year, and target year, computes household population and
 	households from PPH and GQ shares, and summarizes growth at the RG level.
 
 	Args:
 		city_data (pandas.DataFrame): The raw city-level control totals input.
-		ref_base_year (int): The reference base year (e.g. 2018).
+		ref_base_year (int): The REF (Regional Economic Forecast) base year (e.g. 2018).
 		base_year (int): The rebase base year (e.g. 2020).
 		target_year (int): The target horizon year (e.g. 2050).
 
@@ -248,10 +248,10 @@ def build_rebased_targets(city_data, ref_base_year, base_year, target_year):
 
 
 def load_regional_totals(pipeline, base_year):
-	"""Load regional reference-projection totals for optional scaling.
+	"""Load Regional Economic Forecast (REF) projection totals for optional scaling.
 
 	Returns ``None`` when scaling is disabled via
-	``rebased_targets.scale_to_ref`` or no projection years beyond
+	``rebased_targets.scale_to_ref`` or no REF projection years beyond
 	the base year are available.
 
 	Args:
@@ -440,14 +440,14 @@ def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, ta
 			:func:`build_rebased_targets`.
 		regtot (dict or None): Optional regional totals from
 			:func:`load_regional_totals`.
-		ref_base_year (int): The reference base year.
+		ref_base_year (int): The REF (Regional Economic Forecast) base year.
 		base_year (int): The rebase base year.
 		target_year (int): The target horizon year.
 		round_interpolated (bool, optional): Whether to round interpolated
 			values. Defaults to False.
 		stepped_years (list[int], optional): Explicit list of years for
 			stepped output. When ``None``, defaults to 5-year intervals
-			from *base_year* through *target_year*, plus the reference
+			from *base_year* through *target_year*, plus the REF
 			base year.
 
 	Returns:
@@ -548,7 +548,7 @@ def run_step(context):
 	"""Execute the rebased control-totals pipeline step.
 
 	Loads city-level input data, builds rebased targets, optionally scales
-	to regional reference projections, interpolates into stepped control
+	to Regional Economic Forecast (REF) projections, interpolates into stepped control
 	totals, writes Excel workbooks to the output directory, and persists
 	results to the pipeline.
 

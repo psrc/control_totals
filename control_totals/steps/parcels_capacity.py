@@ -570,6 +570,12 @@ def compute_capacity(comb_max, pclstock, pcl):
     pcl_attrs = pcl[['parcel_id', 'control_id', 'tod_id', 'subreg_id', 'hb_hct_buffer', 'hb_tier']]
     return pcl_attrs.merge(result, on='parcel_id')
 
+def update_ids(result, parcels_hct):
+    """Update control_id and subreg_id."""
+    result.drop(columns=['control_id', 'subreg_id'], inplace=True, errors='ignore')
+    result = result.merge(parcels_hct[['parcel_id', 'control_id', 'subreg_id']], on='parcel_id', how='left')
+    return result
+
 
 def run_step(context):
     """Execute the parcels capacity pipeline step.
@@ -620,7 +626,7 @@ def run_step(context):
         res_units, non_res, res_units_mix, non_res_mix, res_ratio, mu_sampling, rng_seed
     )
     result = compute_capacity(comb_max, pclstock, tables['parcels'])
-
+    result = update_ids(result,p.get_geodataframe('parcels_hct'))
     if save_csv:
         out_path = Path(p.get_output_dir()) / f'{file_prefix}.csv'
         result.to_csv(out_path, index=False)

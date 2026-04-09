@@ -24,12 +24,8 @@ def load_tables(pipeline):
     # get units and pop targets that have been adjusted to base year
     units = p.get_table('adjusted_units_change_targets').drop(columns=['start'])
     pop = p.get_table('adjusted_total_pop_change_targets').drop(columns=['start'])
-    df = pop.merge(units, on='target_id',how='inner')
+    df = pop.merge(units, on='target_id',how='outer')
     xwalk = p.get_table('control_target_xwalk')
-    
-    # filter to only counties that are using unit change targets in settings.yaml
-    included_counties = p.settings['target_types']['unit_chg']
-    df = df[df['county_id'].isin(included_counties)].copy()
 
     # get ofm estimates for base year
     ofm = p.get_table(f'ofm_parcelized_{base_year}_by_control_area')
@@ -51,6 +47,9 @@ def load_tables(pipeline):
     df = df.merge(ofm,on='target_id',how='left')
     # calculate gq for target year
     df = calc_gq(p,df,ofm,target_year,'OFM')
+    # filter to only counties that are using unit change targets in settings.yaml
+    included_counties = p.settings['target_types']['unit_chg']
+    df = df[df['county_id'].isin(included_counties)]
     return df
 
 def targets_calculations(pipeline, df):

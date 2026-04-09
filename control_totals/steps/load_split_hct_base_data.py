@@ -36,8 +36,7 @@ def load_base_data_from_mysql(base_db, creds_path):
 	"""Load household, person, and job base data from a MySQL database.
 
 	Queries the base-year MySQL database for household/person and job
-	counts grouped by subreg and control geography, then merges with
-	control and subreg metadata.
+	counts grouped by parcel, then merges the two result sets.
 
 	Args:
 		base_db (str): Name of the MySQL database (e.g.
@@ -45,9 +44,8 @@ def load_base_data_from_mysql(base_db, creds_path):
 		creds_path (pathlib.Path): Path to the credentials file.
 
 	Returns:
-		pandas.DataFrame: Base data with columns including
-			``split_geo_id``, ``nosplit_geo_id``, ``households``,
-			``persons``, and ``jobs``.
+		pandas.DataFrame: Base data with columns ``parcel_id``,
+			``households``, ``persons``, and ``jobs``.
 	"""
 	user, password, host = _read_mysql_creds(creds_path)
 	engine = create_engine(
@@ -55,43 +53,42 @@ def load_base_data_from_mysql(base_db, creds_path):
 	)
 
 	households_query = f"""
-		select t3.control_id as nosplit_geo_id,
-			   t3.subreg_id as split_geo_id,
+		select t2.parcel_id,
 			   count(t1.household_id) as households,
 			   sum(persons) as persons
 		from households as t1
 		join buildings as t2 on t1.building_id = t2.building_id
-		join {base_db}.parcels as t3 on t2.parcel_id = t3.parcel_id
-		group by t3.subreg_id, t3.control_id
+		group by t2.parcel_id
 	"""
 	jobs_query = f"""
-		select t3.control_id as nosplit_geo_id,
-			   t3.subreg_id as split_geo_id,
+		select t2.parcel_id,
 			   count(t1.job_id) as jobs
 		from jobs as t1
 		join buildings as t2 on t1.building_id = t2.building_id
-		join {base_db}.parcels as t3 on t2.parcel_id = t3.parcel_id
-		group by t3.subreg_id, t3.control_id
+		group by t2.parcel_id
 	"""
 
 	hh_base = pd.read_sql_query(households_query, engine)
 	job_base = pd.read_sql_query(jobs_query, engine)
-	base_data = hh_base.merge(job_base, on=['split_geo_id', 'nosplit_geo_id'], how='outer')
-
-	controls = pd.read_sql_query('select * from controls', engine).drop_duplicates()
-	controls = controls.rename(columns={'control_id': 'nosplit_geo_id', 'control_name': 'name'})
-
-	subregs = pd.read_sql_query('select * from subregs', engine)
-	subregs = subregs.rename(columns={'subreg_id': 'split_geo_id', 'rgs_id': 'RGid'})
-	subregs['nosplit_geo_id'] = np.where(subregs['split_geo_id'] > 1000, subregs['split_geo_id'] - 1000, subregs['split_geo_id'])
-	subregs = subregs.drop(columns=['subreg_name'], errors='ignore')
-
-	geos = controls.merge(subregs, on=['nosplit_geo_id', 'county_id'], how='inner')
-	base_data = geos.merge(base_data, on=['split_geo_id', 'nosplit_geo_id'], how='outer')
+	base_data = hh_base.merge(job_base, on='parcel_id', how='outer')
 	for column in ['households', 'persons', 'jobs']:
 		base_data[column] = base_data[column].fillna(0)
 	return base_data
 
+def aggregate_base_data(p, base_data):
+	parcels_hct = p.get_table('current_parcel_control_area_xwalk')[['parcel_id', 'subreg_id', 'control_id']]
+	base_data = base_data.merge(parcels_hct, on='parcel_id')
+	agg_cols = ['households', 'persons', 'jobs']
+	base_data = base_data.groupby(['subreg_id', 'control_id'], as_index=False)[agg_cols].sum()
+	base_data.rename(columns={'subreg_id': 'split_geo_id', 'control_id': 'nosplit_geo_id'}, inplace=True)
+
+	xwalk = p.get_table('control_target_xwalk')[['control_id', 'control_name', 'rgid']].drop_duplicates()
+	base_data = base_data.merge(
+		xwalk.rename(columns={'control_id': 'nosplit_geo_id', 'control_name': 'name', 'rgid': 'RGID'}),
+		on='nosplit_geo_id',
+		how='left',
+	)
+	return base_data
 
 def maybe_save_base_data(base_data, base_data_path):
 	"""Save base data to a local file if a supported format is specified.
@@ -156,12 +153,13 @@ def run_step(context):
 		dict: The unchanged pypyr context dictionary.
 	"""
 	pipeline = Pipeline(settings_path=context['configs_dir'])
-	base_year = int(context.get('split_hct_base_year', 2020))
+	base_year = pipeline.settings['base_year']
 	parcel_base_year = int(context.get('split_hct_parcel_base_year', 2018))
 	creds_path = _resolve_path(R_SCRIPTS_DIR, context.get('split_hct_creds_file', 'creds.txt'))
 	legacy_base_data_path = _resolve_path(PROJECT_ROOT, context.get('split_hct_base_data_file', R_SCRIPTS_DIR / 'inputs' / f'base_data_shares_{base_year}.rda'))
 
 	base_data = load_base_data_from_mysql(f'{parcel_base_year}_parcel_baseyear', creds_path)
+	base_data = aggregate_base_data(pipeline, base_data)
 	pipeline.save_table(get_base_data_table_name(base_year), base_data)
 
 	if bool(context.get('split_hct_save_base_data_file', False)):

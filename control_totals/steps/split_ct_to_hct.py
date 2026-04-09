@@ -283,7 +283,7 @@ def create_ct_generators(base_data):
 			each containing a pandas.DataFrame.
 	"""
 	hh = base_data[
-		['split_geo_id', 'nosplit_geo_id', 'is_tod', 'RGid', 'name', 'households', 'persons', 'poptot_base_nosplit', 'hhtot_base_nosplit']
+		['split_geo_id', 'nosplit_geo_id', 'is_tod', 'RGID', 'name', 'households', 'persons', 'poptot_base_nosplit', 'hhtot_base_nosplit']
 	].copy()
 	hh = hh.rename(columns={'households': 'base'})
 	hh['pph_base'] = _series_divide(hh['persons'], hh['base'], default=0).fillna(0)
@@ -292,8 +292,8 @@ def create_ct_generators(base_data):
 	hh.loc[hh['is_tod'], 'pph_ratio'] = hh.loc[hh['is_tod'], 'pph_ratio'].clip(upper=0.9999)
 	hh.loc[~hh['is_tod'], 'pph_ratio'] = hh.loc[~hh['is_tod'], 'pph_ratio'].clip(lower=0.0001)
 
-	emp = base_data[['split_geo_id', 'nosplit_geo_id', 'is_tod', 'RGid', 'name', 'jobs']].copy().rename(columns={'jobs': 'base'})
-	pop = base_data[['split_geo_id', 'nosplit_geo_id', 'is_tod', 'RGid', 'name', 'persons']].copy().rename(columns={'persons': 'base'})
+	emp = base_data[['split_geo_id', 'nosplit_geo_id', 'is_tod', 'RGID', 'name', 'jobs']].copy().rename(columns={'jobs': 'base'})
+	pop = base_data[['split_geo_id', 'nosplit_geo_id', 'is_tod', 'RGID', 'name', 'persons']].copy().rename(columns={'persons': 'base'})
 	return {'HH': hh, 'Emp': emp, 'HHPop': pop}
 
 
@@ -459,7 +459,7 @@ def _regional_share_subset(df, aggr_geo):
 	Returns:
 		float: Subset TOD share as a percentage (0–100).
 	"""
-	denom_mask = df['has_tod'] | ((df['nosplit_geo_id'].isin(aggr_geo)) & (df['RGid'] <= 3))
+	denom_mask = df['has_tod'] | ((df['nosplit_geo_id'].isin(aggr_geo)) & (df['RGID'] <= 3))
 	numerator = df.loc[df['is_tod'], 'wtrg'].sum()
 	denominator = df.loc[denom_mask, 'wtrg'].sum()
 	return 0.0 if denominator == 0 else numerator / denominator * 100
@@ -483,7 +483,7 @@ def _weights_snapshot(df, indicator, iteration, total_share):
 	"""
 	if indicator == 'HHPop':
 		return None
-	weights = df.loc[df['is_tod'], ['nosplit_geo_id', 'RGid', 'name', 'scale', 'target.share', 'wtrg']].copy()
+	weights = df.loc[df['is_tod'], ['nosplit_geo_id', 'RGID', 'name', 'scale', 'target.share', 'wtrg']].copy()
 	weights['todcap.share'] = df.loc[df['is_tod'], 'todcap.share'].to_numpy() * 100 if 'todcap.share' in df else np.nan
 	weights['incr'] = df.loc[df['is_tod'], 'incr'].to_numpy() if 'incr' in df else np.nan
 	weights['remcap'] = df.loc[df['is_tod'], 'true_remcap'].to_numpy() if 'true_remcap' in df else np.nan
@@ -491,7 +491,7 @@ def _weights_snapshot(df, indicator, iteration, total_share):
 	total_row = pd.DataFrame([
 		{
 			'nosplit_geo_id': 0,
-			'RGid': -1,
+			'RGID': -1,
 			'name': 'Total',
 			'todcap.share': np.nan,
 			'incr': np.nan,
@@ -526,7 +526,7 @@ def _aggregate_no_growth_area_rows(df, indicator, aggr_geo):
 
 	source = df.loc[df['nosplit_geo_id'].isin(aggr_geo)].copy()
 	if indicator != 'HHPop':
-		aggregated = source.groupby(['nosplit_geo_id', 'RGid', 'name'], as_index=False).agg(
+		aggregated = source.groupby(['nosplit_geo_id', 'RGID', 'name'], as_index=False).agg(
 			base=('base', 'sum'),
 			totcap=('totcap', 'sum'),
 			netcap=('netcap', 'sum'),
@@ -537,7 +537,7 @@ def _aggregate_no_growth_area_rows(df, indicator, aggr_geo):
 		aggregated['capshare'] = 100.0
 		aggregated['has_tod'] = False
 	else:
-		aggregated = source.groupby(['nosplit_geo_id', 'RGid', 'name'], as_index=False).agg(
+		aggregated = source.groupby(['nosplit_geo_id', 'RGID', 'name'], as_index=False).agg(
 			base=('base', 'sum'),
 			geotottarget_orig=('geotottarget.orig', 'mean'),
 		)
@@ -546,7 +546,7 @@ def _aggregate_no_growth_area_rows(df, indicator, aggr_geo):
 	aggregated = aggregated.rename(columns={'geotottarget_orig': 'geotottarget.orig'})
 
 	if indicator == 'HH':
-		hh_extra = source.groupby(['nosplit_geo_id', 'RGid', 'name'], as_index=False).agg(
+		hh_extra = source.groupby(['nosplit_geo_id', 'RGID', 'name'], as_index=False).agg(
 			pph_base=('pph_base_nosplit', 'mean'),
 			geotrg_pph=('geotrg.pph', 'mean'),
 			geotrg_pop=('geotrg.pop', 'mean'),
@@ -556,7 +556,7 @@ def _aggregate_no_growth_area_rows(df, indicator, aggr_geo):
 		hh_extra['trg.pph'] = hh_extra['geotrg.pph']
 		hh_extra['wtrg.pph'] = hh_extra['geotrg.pph']
 		hh_extra['is_tod'] = False
-		aggregated = aggregated.merge(hh_extra, on=['nosplit_geo_id', 'RGid', 'name', 'is_tod'], how='left')
+		aggregated = aggregated.merge(hh_extra, on=['nosplit_geo_id', 'RGID', 'name', 'is_tod'], how='left')
 
 	aggregated['trggrowth'] = aggregated['geotottarget.orig'] - aggregated['base']
 	preserved = df.loc[~df['nosplit_geo_id'].isin(aggr_geo)].copy()
@@ -615,7 +615,7 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 		if aggregate_no_growth_areas:
 			if indicator == 'HH':
 				aggr_geo = working.loc[
-					working['is_tod'] & ((working['trggrowth'] <= 500) | (working['capshare'] == 0) | (working['RGid'] > 3)),
+					working['is_tod'] & ((working['trggrowth'] <= 500) | (working['capshare'] == 0) | (working['RGID'] > 3)),
 					'nosplit_geo_id',
 				].unique()
 			elif indicator == 'Emp':
@@ -624,7 +624,7 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 					& working['is_tod']
 					& (working['trggrowth'] > 500)
 					& (working['capshare'] > 0)
-					& (working['RGid'] <= 3),
+					& (working['RGID'] <= 3),
 					'nosplit_geo_id',
 				].unique()
 				if len(no_pass) > 0:
@@ -658,13 +658,13 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 
 			working['incr'] = 0.0
 			for rgid, step_value in zip([1, 2, 3], step_values):
-				working.loc[working['RGid'] == rgid, 'incr'] = step_value
+				working.loc[working['RGID'] == rgid, 'incr'] = step_value
 
 			working['wtrg'] = working['trg0']
 			working['scale'] = 0.0
 			working['minshare'] = 0.0
 			for rgid, minimum in zip([1, 2, 3], scenario[indicator]):
-				working.loc[working['RGid'] == rgid, 'minshare'] = minimum
+				working.loc[working['RGID'] == rgid, 'minshare'] = minimum
 			working.loc[working['geonetcap'] < working['trggrowth'], 'minshare'] = 0.0
 
 			tod_mask = working['is_tod'] & ((100 - working['capshare']) < working['minshare'])
@@ -728,16 +728,16 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 		df['trgdif'] = df['geotottarget.final'] - df['geotottarget.orig']
 		df = df.sort_values(['nosplit_geo_id', 'is_tod'], ascending=[True, False]).reset_index(drop=True)
 
-		rg_tod = df.loc[df['is_tod']].groupby('RGid', as_index=False)['wtrg'].sum()
-		rg_total = df.loc[df['RGid'].isin([1, 2, 3])].groupby('RGid', as_index=False)['wtrg'].sum().rename(columns={'wtrg': 'total_wtrg'})
-		tod_by_rg = rg_tod.merge(rg_total, on='RGid', how='left')
+		rg_tod = df.loc[df['is_tod']].groupby('RGID', as_index=False)['wtrg'].sum()
+		rg_total = df.loc[df['RGID'].isin([1, 2, 3])].groupby('RGID', as_index=False)['wtrg'].sum().rename(columns={'wtrg': 'total_wtrg'})
+		tod_by_rg = rg_tod.merge(rg_total, on='RGID', how='left')
 		tod_by_rg['share'] = _series_divide(tod_by_rg['wtrg'] * 100, tod_by_rg['total_wtrg'], default=0).fillna(0)
 
 		checks[indicator] = tod_by_rg.copy()
 		ct_df[indicator] = df
 
 	hhres = ct_df['HH'][
-		['split_geo_id', 'nosplit_geo_id', 'RGid', 'name', 'is_tod', 'totcap', 'netcap', 'capshare', 'target.share', 'trg0', 'wtrg', 'base', 'pph_base']
+		['split_geo_id', 'nosplit_geo_id', 'RGID', 'name', 'is_tod', 'totcap', 'netcap', 'capshare', 'target.share', 'trg0', 'wtrg', 'base', 'pph_base']
 	].copy()
 	hhres = hhres.rename(
 		columns={
@@ -762,7 +762,7 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 	hhres['target_growth_final'] = np.rint(hhres['target_growth_final']).astype(int)
 	hhres = hhres.drop(columns=['target.share'])
 
-	popres = ct_df['HHPop'][['split_geo_id', 'nosplit_geo_id', 'RGid', 'name', 'is_tod', 'target.share', 'wtrg', 'base']].copy()
+	popres = ct_df['HHPop'][['split_geo_id', 'nosplit_geo_id', 'RGID', 'name', 'is_tod', 'target.share', 'wtrg', 'base']].copy()
 	popres = popres.rename(
 		columns={
 			'split_geo_id': 'subreg_id',
@@ -776,7 +776,7 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 	popres['HHPoptarget'] = np.rint(ct_df['HHPop']['tottrg.final']).astype(int)
 	popres = popres.drop(columns=['target.share'])
 
-	empres = ct_df['Emp'][['split_geo_id', 'nosplit_geo_id', 'RGid', 'name', 'is_tod', 'totcap', 'netcap', 'capshare', 'target.share', 'trg0', 'wtrg', 'base']].copy()
+	empres = ct_df['Emp'][['split_geo_id', 'nosplit_geo_id', 'RGID', 'name', 'is_tod', 'totcap', 'netcap', 'capshare', 'target.share', 'trg0', 'wtrg', 'base']].copy()
 	empres = empres.rename(
 		columns={
 			'split_geo_id': 'subreg_id',
@@ -806,23 +806,23 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 	)
 
 	check = (
-		checks['HH'][['RGid', 'share']].rename(columns={'share': 'tod_share_hh'})
-		.merge(checks['HHPop'][['RGid', 'share']].rename(columns={'share': 'tod_share_pop'}), on='RGid', how='outer')
-		.merge(checks['Emp'][['RGid', 'share']].rename(columns={'share': 'tod_share_emp'}), on='RGid', how='outer')
+		checks['HH'][['RGID', 'share']].rename(columns={'share': 'tod_share_hh'})
+		.merge(checks['HHPop'][['RGID', 'share']].rename(columns={'share': 'tod_share_pop'}), on='RGID', how='outer')
+		.merge(checks['Emp'][['RGID', 'share']].rename(columns={'share': 'tod_share_emp'}), on='RGID', how='outer')
 	)
-	check = check[check['RGid'].isin([1, 2, 3])].copy()
+	check = check[check['RGID'].isin([1, 2, 3])].copy()
 	check = pd.concat(
 		[
 			check,
 			pd.DataFrame([
 				{
-					'RGid': -2,
+					'RGID': -2,
 					'tod_share_hh': round(todshare_sub['HH'], 2),
 					'tod_share_pop': round(todshare_sub['HHPop'], 2),
 					'tod_share_emp': round(todshare_sub['Emp'], 2),
 				},
 				{
-					'RGid': -1,
+					'RGID': -1,
 					'tod_share_hh': round(todshare.get('HH2', 0.0), 2),
 					'tod_share_pop': round(todshare['HHPop'], 2),
 					'tod_share_emp': round(todshare['Emp'], 2),
@@ -831,7 +831,7 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 		],
 		ignore_index=True,
 	)
-	check['RGid'] = check['RGid'].replace({-2: 'Tot within RG', -1: 'Total'}).astype(str)
+	check['RGID'] = check['RGID'].replace({-2: 'Tot within RG', -1: 'Total'}).astype(str)
 
 	return {
 		'hhres': hhres,
