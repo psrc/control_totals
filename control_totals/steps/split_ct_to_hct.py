@@ -115,27 +115,6 @@ def load_capacity(capacity_path):
 	return pcl_cap, geo_cap
 
 
-def _load_r_object(path):
-	"""Load the first object from an R data file.
-
-	Args:
-		path (pathlib.Path or str): Path to the ``.rda``, ``.rdata``, or
-			``.rds`` file.
-
-	Returns:
-		pandas.DataFrame: The loaded DataFrame.
-
-	Raises:
-		ValueError: If the file contains no objects.
-	"""
-	import pyreadr
-
-	result = pyreadr.read_r(str(path))
-	if not result:
-		raise ValueError(f'No objects found in {path}')
-	return next(iter(result.values())).copy()
-
-
 def load_base_data_from_file(base_data_path):
 	"""Load base-data from a local file in various formats.
 
@@ -154,8 +133,6 @@ def load_base_data_from_file(base_data_path):
 	"""
 	if not base_data_path.exists():
 		raise FileNotFoundError(f'Base data file not found: {base_data_path}')
-	if base_data_path.suffix.lower() in {'.rda', '.rdata', '.rds'}:
-		return _load_r_object(base_data_path)
 	if base_data_path.suffix.lower() == '.pkl':
 		return pd.read_pickle(base_data_path)
 	if base_data_path.suffix.lower() == '.parquet':
@@ -642,6 +619,7 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 			working.loc[working['is_tod'], 'wtrg'] = working.loc[working['is_tod'], 'pop']
 			working = _assign_non_tod_from_tod(working, 'wtrg')
 			working['wtrg'] = working['wtrg'].fillna(working['trggrowth'])
+			working['wtrg'] = np.maximum(-working['base'], working['wtrg'])
 		else:
 			tod_ids = set(working.loc[working['is_tod'], 'nosplit_geo_id'])
 			working['has_tod'] = True
@@ -654,6 +632,7 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 			)
 			working = _assign_non_tod_from_tod(working, 'trg0')
 			working = _apply_non_tod_capacity_overflow(working, 'trg0')
+			working['trg0'] = np.maximum(-working['base'], working['trg0'])
 			working = _compute_growth_share(working, 'trg0')
 
 			working['incr'] = 0.0
@@ -701,6 +680,7 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 			df.loc[df['is_tod'], 'wtrg'] = np.minimum(df.loc[df['is_tod'], 'netcap'], df.loc[df['is_tod'], 'trggrowth'] * max_allowed)
 			df = _assign_non_tod_from_tod(df, 'wtrg')
 			df = _apply_non_tod_capacity_overflow(df, 'wtrg')
+			df['wtrg'] = np.maximum(-df['base'], df['wtrg'])
 
 			previous_share = todshare[indicator]
 			if indicator == 'HH':

@@ -41,14 +41,14 @@ def load_tables(pipeline):
     targets = p.get_table('extrapolated_targets')[target_cols].set_index('target_id').astype(float).reset_index()
     # load control area to target xwalk
     xwalk = p.get_table('control_target_xwalk')
-    # load base year dec data
-    dec = p.get_table(f'decennial_by_control_area')
+    # load base year ofm data
+    ofm = p.get_table(f'ofm_parcelized_{base_year}_by_control_area')
     # load base year employment data
     base_emp = p.get_table(f'employment_{base_year}_by_control_area')
     # merge all tables together
     df = (
         xwalk
-        .merge(dec, on='control_id', how='left').drop(columns='control_name', errors='ignore')
+        .merge(ofm, on='control_id', how='left').drop(columns='control_name', errors='ignore')
         .merge(base_emp, on='control_id', how='left').drop(columns='control_name', errors='ignore')
         .merge(targets, on='target_id', how='left')
     )
@@ -79,10 +79,10 @@ def recalc_excluded_control_areas(pipeline, df):
     mask = df['exclude_from_target'] == 1
     # left is horizon year column name, right is base year column name
     updates = {
-    'total_pop': 'dec_total_pop',
-    'hhpop': 'dec_hhpop',
-    'gq': 'dec_gq',
-    'hh': 'dec_hh',
+    'total_pop': 'ofm_total_pop',
+    'hhpop': 'ofm_hhpop',
+    'gq': 'ofm_gq',
+    'hh': 'ofm_hh',
     'emp': f'Emp_TotNoMil',
     }
     # for each horizon year and for each column above, set the value to equal base year value
@@ -171,11 +171,11 @@ def save_r_scrpt_inputs(pipeline, control_totals_df):
     rename_cols_base_year = {
         'rgid': 'RGID',
         'target_name': 'name',
-        'dec_total_pop': f'TotPop{base_year_2_digits}',
-        'dec_hhpop': f'HHpop{base_year_2_digits}',
-        'dec_hh': f'HH{base_year_2_digits}',
-        'dec_gq': f'GQ{base_year_2_digits}',
-        'dec_units': f'Units{base_year_2_digits}',
+        'ofm_total_pop': f'TotPop{base_year_2_digits}',
+        'ofm_hhpop': f'HHpop{base_year_2_digits}',
+        'ofm_hh': f'HH{base_year_2_digits}',
+        'ofm_gq': f'GQ{base_year_2_digits}',
+        'ofm_units': f'Units{base_year_2_digits}',
         'Emp_TotNoMil': f'TotEmp{base_year_2_digits}_wCRnoMil',
         f'total_pop_{targets_end_year}': f'TotPop{targets_end_year_2_digits}',
         f'total_pop_{controls_end_year}': f'TotPop{controls_end_year_2_digits}',

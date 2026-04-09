@@ -135,7 +135,7 @@ def extrapolate_target(pipeline, df, col):
     else:
         base_col = f'ofm_{col}'
     target_col = f'{col}_{targets_end_year}'
-    df[annual_change_col] = (df[target_col] - df[base_col]) / years_to_target
+    df[annual_change_col] = ((df[target_col] - df[base_col]) / years_to_target).clip(lower=0)
     control_col = f'{col}_{controls_end_year}'
     df[control_col] = df[base_col] + df[annual_change_col] * years_to_control
     df[control_col] = df[control_col].round(0).fillna(0).astype(int)
@@ -165,8 +165,8 @@ def extrapolate_to_controls_year(pipeline):
     df = extrapolate_target(p,df,'total_pop')
     df = extrapolate_target(p,df,'emp')
     # calculate gq for controls horizon year
-    dec = df[['target_id','dec_gq']]
-    df = calc_gq(p,df,dec,controls_end_year)
+    ofm_gq = df[['target_id','ofm_gq']]
+    df = calc_gq(p,df,ofm_gq,controls_end_year, base_data_source='OFM')
     # calculate hhpop for controls horizon year
     df[f'hhpop_{controls_end_year}'] = df[f'gq_{controls_end_year}'] + df[f'total_pop_{controls_end_year}']
     # calculate hhsz for controls horizon year
