@@ -29,7 +29,7 @@ def load_tables(prop_path, lookup_path):
         'buildings': pd.read_csv(lookup_path / 'buildings.csv'),
         'proposals': pd.read_csv(prop_path / 'development_project_proposals.csv'),
         'components': pd.read_csv(prop_path / 'development_project_proposal_components.csv'),
-        'parcels': pd.read_csv(lookup_path / 'parcels.csv'),
+        'parcels': pd.read_csv(lookup_path / 'parcels.csv', low_memory=False),
         'templates': pd.read_csv(lookup_path / 'development_templates.csv'),
         'template_components': pd.read_csv(lookup_path / 'development_template_components.csv'),
         'bsqft_per_job': pd.read_csv(lookup_path / 'building_sqft_per_job.csv'),
@@ -626,7 +626,8 @@ def run_step(context):
         res_units, non_res, res_units_mix, non_res_mix, res_ratio, mu_sampling, rng_seed
     )
     result = compute_capacity(comb_max, pclstock, tables['parcels'])
-    result = update_ids(result,p.get_geodataframe('parcels_hct'))
+    if p.check_table_exists('parcels_hct'):
+        result = update_ids(result,p.get_geodataframe('parcels_hct'))
     if save_csv:
         out_path = Path(p.get_output_dir()) / f'{file_prefix}.csv'
         result.to_csv(out_path, index=False)

@@ -331,16 +331,16 @@ shapefiles:
 # Pypyr steps
 #----------------------------
 steps:
-#  - steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
-#  - steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
+ - steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
+ - steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
  - steps.data_loading.load_data # loads data from csv files into hdf5
-#  - steps.geoprocessing.create_control_area_geography # creates control area geography by unioning and dissolving regional geographies, military bases, tribal areas, and natural resource areas together
-#  - steps.geoprocessing.flag_hct_parcels # creates hct buffers around transit points and flags parcels that fall within those buffers
-#  - steps.geoprocessing.block_control_area_xwalk # creates block to control area crosswalk
-#  - steps.geoprocessing.parcel_control_area_xwalks # creates parcel to control area crosswalk
-#  - steps.data_loading.get_census_data # pulls decennial census data from api and saves to hdf5
-#  - steps.data_loading.prepare_parcel_data # aggregates parcel data to control area
-#  - steps.data_loading.prepare_block_data # aggregates decennial block data to control area
+ - steps.geoprocessing.create_control_area_geography # creates control area geography by unioning and dissolving regional geographies, military bases, tribal areas, and natural resource areas together
+ - steps.geoprocessing.flag_hct_parcels # creates hct buffers around transit points and flags parcels that fall within those buffers
+ - steps.geoprocessing.block_control_area_xwalk # creates block to control area crosswalk
+ - steps.geoprocessing.parcel_control_area_xwalks # creates parcel to control area crosswalk
+ - steps.data_loading.get_census_data # pulls decennial census data from api and saves to hdf5
+ - steps.data_loading.prepare_parcel_data # aggregates parcel data to control area
+ - steps.data_loading.prepare_block_data # aggregates decennial block data to control area
 
  - steps.split_unincorporated_kitsap_housing_targets # fills in missing Kitsap housing unit growth targets
  - steps.adjust_targets_to_base_year # adjusts targets to base year using ofm and employment data
