@@ -6,4 +6,6 @@
 *.html
 *.gpkg
 *.pdf
+*.gdb
 Employment*.csv
+

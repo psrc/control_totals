@@ -156,9 +156,9 @@ def prepare_regional_geographies(pipeline):
 def prepare_natural_resource_areas(pipeline):
     """Prepare natural-resource control area geometries.
 
-    Buffers national forest, national park, and natural resource polygons,
-    dissolves them into a single layer, clips to the PSRC region, and
-    assigns per-county control IDs.
+    Combines national forest, national park, and natural resource polygons,
+    dissolves them into a single layer, clips to the PSRC region, dissolves
+    slivers and assigns control IDs.
 
     Args:
         pipeline (Pipeline): The data pipeline providing access to geodataframes.
@@ -175,23 +175,44 @@ def prepare_natural_resource_areas(pipeline):
         '061': 304,
     }
     county = p.get_geodataframe('county').query("psrc == 1")
-    buffer_size = 50
-    nat_forest = p.get_geodataframe('national_forest')
-    nat_forest['geometry'] = nat_forest.buffer(buffer_size)
-    nat_park = p.get_geodataframe('national_park')
-    nat_park['geometry'] = nat_park.buffer(buffer_size)
-    nat_resource = p.get_geodataframe('natural_resource')
-    nat_resource['geometry'] = nat_resource.buffer(buffer_size)
-    gdf = pd.concat([nat_forest, nat_park, nat_resource], ignore_index=True)
-    gdf = gdf.dissolve()
-    gdf['geometry'] = gdf.buffer(-buffer_size)
-    gdf = gdf.clip(county.dissolve())
-    gdf = (
-        gdf.overlay(county,keep_geom_type=True)
-        .dissolve('county_fip',as_index=False)
+    # bring in natural resource layers and combine
+    nat_forest = p.get_geodataframe('national_forest').dissolve()
+    nat_park = p.get_geodataframe('national_park').dissolve()
+    nat_resource = p.get_geodataframe('natural_resource').dissolve()
+    nat = pd.concat([nat_forest, nat_park, nat_resource], ignore_index=True).dissolve()
+    nat = nat.overlay(county, how='identity',keep_geom_type=True)
+    nat = nat[nat['psrc'] == 1]
+
+    # loop through each county to identify and dissolve slivers
+    nat_resource_out = pd.DataFrame()
+    for selected_county in county['county_fip'].unique():
+        # Select the natural resources for the current county and perform a union overlay with the county geometry
+        gdf = nat[nat['county_fip'] == selected_county]
+        gdf = gdf.overlay(county[county['county_fip'] == selected_county], how='union',keep_geom_type=True)
+        # Identify the slivers by exploding the geometries that do not have a resource attribute, 
+        # creating representative points, and checking for intersections with buffered geometries
+        # of the original natural resources layer
+        explode = gdf[gdf['resource'].isna()].explode().reset_index(drop=True)
+        explode['exp_id'] = explode.index + 1
+        exp_pts = explode.copy()
+        exp_pts['geometry'] = exp_pts.representative_point()
+        buffer = gdf[~gdf['resource'].isna()]
+        buffer['geometry'] = buffer.buffer(p.settings['nat_resource_sliver_buffer'])
+        exp_pts = exp_pts.sjoin(buffer,how='left')
+        # Extract the slivers and combine them with the original geometries that have
+        #  a resource attribute, then dissolve
+        slivers = exp_pts.loc[~exp_pts['resource_right'].isna(),'exp_id']
+        sliver_gdf = explode.loc[explode['exp_id'].isin(slivers)]
+        gdf_out = pd.concat([gdf.loc[~gdf['resource'].isna()], sliver_gdf], ignore_index=True)
+        gdf_out = gdf_out.dissolve()
+        gdf_out['county_fip'] = selected_county
+        nat_resource_out = pd.concat([nat_resource_out, gdf_out[['county_fip', 'geometry']]], ignore_index=True)
+
+    # assign control_ids
+    nat_resource_out = (nat_resource_out
         .assign(control_id = lambda df: df['county_fip'].map(control_id_map))
     )
-    return gdf[['control_id','geometry']]
+    return nat_resource_out[['control_id','geometry']]
 
 def run_step(context):
     """Execute the control-area geography creation pipeline step.
@@ -232,4 +253,6 @@ def run_step(context):
 
     # save control areas to h5
     p.save_geodataframe('control_areas',gdf)
+    # save control areas to geodatabase for use in ArcGIS
+    gdf[['control_id','control_name','geometry']].to_file(p.get_output_path('control.gdb'),layer='control26', driver='OpenFileGDB', promote_to_multi=True)
     return context
