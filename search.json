@@ -1,0 +1,205 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Control Totals Validation",
+    "section": "",
+    "text": "0.1 What it validates\nThis dashboard summarizes and validates the output of the control_totals pipeline. Each chapter is a self-contained Jupyter notebook in summary_scripts/.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Control Totals Validation</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#what-it-validates",
+    "href": "index.html#what-it-validates",
+    "title": "Control Totals Validation",
+    "section": "",
+    "text": "Output vs. input targets — do the rebased control totals reach the county / RG growth targets at the target year?\nOutput vs. legacy LUVit — how do the new control totals compare to results from the legacy R pipeline (examples/legacy_luvit/output)?\nInternal consistency — control-area sums add to county and regional totals, no negative values, HCT and non-HCT splits balance.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Control Totals Validation</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#pointing-the-dashboard-at-a-run",
+    "href": "index.html#pointing-the-dashboard-at-a-run",
+    "title": "Control Totals Validation",
+    "section": "0.2 Pointing the dashboard at a run",
+    "text": "0.2 Pointing the dashboard at a run\nThe file config.yaml controls which run output is summarized:\nexample_path: ../../examples/summer_2026   # required\nlegacy_path:  ../../examples/legacy_luvit  # optional comparison\nPaths are relative to the validation/ folder. Edit config.yaml, re-execute the notebooks, then re-render the book.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Control Totals Validation</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#rendering-the-book",
+    "href": "index.html#rendering-the-book",
+    "title": "Control Totals Validation",
+    "section": "0.3 Rendering the book",
+    "text": "0.3 Rendering the book\nInstall Quarto and from the control_totals/validation/ folder run:\nquarto render\nOutput is written to validation-dashboard/. Notebooks are not executed on render (execute.enabled: false); they ship with their committed outputs. To re-execute everything before rendering:\njupyter nbconvert --to notebook --execute summary_scripts/*.ipynb --inplace\nquarto render\nTo render just one notebook (using its committed output):\nquarto render summary_scripts/population.ipynb",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Control Totals Validation</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#adding-a-new-chapter",
+    "href": "index.html#adding-a-new-chapter",
+    "title": "Control Totals Validation",
+    "section": "0.4 Adding a new chapter",
+    "text": "0.4 Adding a new chapter\n\nDrop a new .ipynb in summary_scripts/.\nIn any cell, import the shared helpers:\nfrom validation_data_input import load_controls, load_targets, load_settings\nfrom util import apply_plotly_theme, COUNTY_NAME\nExecute the notebook (so its outputs are committed).\nAdd the path to the chapters: list in _quarto.yml.\nquarto render.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Control Totals Validation</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#layout-reference",
+    "href": "index.html#layout-reference",
+    "title": "Control Totals Validation",
+    "section": "0.5 Layout reference",
+    "text": "0.5 Layout reference\nvalidation/\n├── _quarto.yml              book config + sidebar\n├── index.qmd                this page\n├── config.yaml              which run to validate\n├── styling/custom.scss      light/dark theme tweaks\n├── PSRClogo2016path.png     PSRC logo (sidebar)\n└── summary_scripts/\n    ├── util.py              plotly + pandas helpers\n    ├── validation_data_input.py   cached data loaders\n    └── *.ipynb              one chapter per notebook",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Control Totals Validation</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/population.html",
+    "href": "summary_scripts/population.html",
+    "title": "2  Population",
+    "section": "",
+    "text": "2.1 County totals at base year and end year\nTotal population by county across stepped years, compared to the regional totals and to legacy LUVit estimates when available.\n2023\n2044\n2050\nGrowth (base→targets)\n% Growth\n\n\ncounty\n \n \n \n \n \n\n\n\n\nKing\n2,331,162\n2,881,068\n3,038,186\n549,906\n+23.6%\n\n\nKitsap\n275,524\n338,390\n356,352\n62,866\n+22.8%\n\n\nPierce\n921,372\n1,170,859\n1,242,139\n249,487\n+27.1%\n\n\nSnohomish\n855,882\n1,133,358\n1,212,638\n277,476\n+32.4%\n\n\nRegion\n4,383,940\n5,523,675\n5,849,315\n1,139,735\n+26.0%",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Population</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/population.html#trajectory-by-county",
+    "href": "summary_scripts/population.html#trajectory-by-county",
+    "title": "2  Population",
+    "section": "2.2 Trajectory by county",
+    "text": "2.2 Trajectory by county\n\n\nUnable to display output for mime type(s): application/vnd.plotly.v1+json",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Population</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/population.html#regional-total-controls-vs.-legacy-luvit",
+    "href": "summary_scripts/population.html#regional-total-controls-vs.-legacy-luvit",
+    "title": "2  Population",
+    "section": "2.3 Regional total — controls vs. legacy LUVit",
+    "text": "2.3 Regional total — controls vs. legacy LUVit\n\n\nUnable to display output for mime type(s): application/vnd.plotly.v1+json",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Population</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/population.html#notes",
+    "href": "summary_scripts/population.html#notes",
+    "title": "2  Population",
+    "section": "2.4 Notes",
+    "text": "2.4 Notes\n\nBase year, targets year, and end year come from configs/settings.yaml of the active example.\nLegacy comparison loads examples/legacy_luvit/output/total_pop_estimates_all_years.csv if present and non-empty.",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Population</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/housing_units.html",
+    "href": "summary_scripts/housing_units.html",
+    "title": "3  Housing units",
+    "section": "",
+    "text": "3.1 Households by county\nHousehold totals by county and growth from base year to targets year — and the implied delta vs. the input city-level targets.\nHH 2023\nHH 2044\nGrowth\n% Growth\n\n\ncounty\n \n \n \n \n\n\n\n\nKing\n952,893\n1,141,705\n188,812\n+19.8%\n\n\nKitsap\n106,813\n130,688\n23,875\n+22.4%\n\n\nPierce\n345,236\n433,147\n87,911\n+25.5%\n\n\nSnohomish\n318,194\n459,469\n141,275\n+44.4%\n\n\nRegion\n1,723,136\n2,165,009\n441,873\n+25.6%",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Housing units</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/housing_units.html#growth-base-targets-by-county",
+    "href": "summary_scripts/housing_units.html#growth-base-targets-by-county",
+    "title": "3  Housing units",
+    "section": "3.2 Growth (base → targets) by county",
+    "text": "3.2 Growth (base → targets) by county\n\n\nUnable to display output for mime type(s): application/vnd.plotly.v1+json",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Housing units</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/housing_units.html#output-vs.-input-city-targets-cityhh",
+    "href": "summary_scripts/housing_units.html#output-vs.-input-city-targets-cityhh",
+    "title": "3  Housing units",
+    "section": "3.3 Output vs. input city targets (CityHH)",
+    "text": "3.3 Output vs. input city targets (CityHH)\n\n\n\n\n\n\n\n \nTarget growth\nControls growth\nControls − Target\n% diff vs. target\n\n\ncounty\n \n \n \n \n\n\n\n\nKing\n242,764\n188,813\n-53,951\n-22.2%\n\n\nKitsap\n30,702\n23,878\n-6,824\n-22.2%\n\n\nPierce\n113,033\n87,914\n-25,119\n-22.2%\n\n\nSnohomish\n181,640\n141,276\n-40,364\n-22.2%",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Housing units</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/housing_units.html#notes",
+    "href": "summary_scripts/housing_units.html#notes",
+    "title": "3  Housing units",
+    "section": "3.4 Notes",
+    "text": "3.4 Notes\n\nHHGro2350 is the input target growth (base_year → targets_end_year) from TargetsRebasedOutput.xlsx → CityHH.\nA small percent difference is expected from rounding and from any RG-level scaling applied during interpolation.",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Housing units</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/employment.html",
+    "href": "summary_scripts/employment.html",
+    "title": "4  Employment",
+    "section": "",
+    "text": "4.1 Employment by county and year\nEmployment by county across stepped years, plus the input city-level employment targets.\nUnable to display output for mime type(s): application/vnd.plotly.v1+json",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Employment</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/employment.html#output-vs.-input-city-targets-cityemp",
+    "href": "summary_scripts/employment.html#output-vs.-input-city-targets-cityemp",
+    "title": "4  Employment",
+    "section": "4.2 Output vs. input city targets (CityEmp)",
+    "text": "4.2 Output vs. input city targets (CityEmp)\n\n\n\n\n\n\n\n \nTarget growth\nControls growth\nControls − Target\n% diff vs. target\n\n\ncounty\n \n \n \n \n\n\n\n\nKing\n432,765\n432,765\n0\n+0.0%\n\n\nKitsap\n40,681\n40,681\n0\n+0.0%\n\n\nPierce\n123,387\n123,387\n0\n+0.0%\n\n\nSnohomish\n153,377\n153,377\n0\n+0.0%",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Employment</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/employment.html#growth-base-targets-by-county",
+    "href": "summary_scripts/employment.html#growth-base-targets-by-county",
+    "title": "4  Employment",
+    "section": "4.3 Growth (base → targets) by county",
+    "text": "4.3 Growth (base → targets) by county\n\n\nUnable to display output for mime type(s): application/vnd.plotly.v1+json",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Employment</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/employment.html#notes",
+    "href": "summary_scripts/employment.html#notes",
+    "title": "4  Employment",
+    "section": "4.4 Notes",
+    "text": "4.4 Notes\n\nSector breakdown (e.g. resource/construction split applied in emp_chg_targets_*.py) is not in the final controls workbook; to validate sector totals, add a new notebook that reads from the intermediate HDF5 outputs.",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Employment</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/consistency_checks.html",
+    "href": "summary_scripts/consistency_checks.html",
+    "title": "5  Consistency checks",
+    "section": "",
+    "text": "5.1 Adding a new check\nInternal QC checks on the produced control totals. Each row of the table is a single rule; failures highlight where to dig in.\nAppend a dict with check, pass, and detail keys to the checks list. Anything boolean works — combine pandas filters with .all() / .sum() for quick rules.",
+    "crumbs": [
+      "<b>QC</b>",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Consistency checks</span>"
+    ]
+  }
+]
