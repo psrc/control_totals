@@ -1,0 +1,39 @@
+[project]
+name = "control-totals"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "branca>=0.8.2",
+    "census>=0.8.25",
+    "geopandas>=1.1.2",
+    "ipykernel>=7.2.0",
+    "iteround>=1.0.4",
+    "nbclient>=0.10.4",
+    "nbconvert>=7.17.1",
+    "nbformat>=5.10.4",
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.3",
+    "plotly>=6.7.0",
+    "pymssql>=2.3.11",
+    "pymysql>=1.1.2",
+    "pyodbc>=5.3.0",
+    "pypyr>=5.9.1",
+    "pyyaml>=6.0.3",
+    "sqlalchemy>=2.0.45",
+    "tables>=3.10.2",
+    "us>=3.2.0",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
