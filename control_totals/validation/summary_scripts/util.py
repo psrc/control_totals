@@ -90,6 +90,12 @@ def apply_plotly_theme(fig: go.Figure) -> go.Figure:
 _register_psrc_template()
 pio.templates.default = "psrc"
 
+# Use a renderer that produces inline HTML/JS so Quarto's HTML output can
+# display the figures. The default 'plotly_mimetype' emits JSON only, which
+# Quarto/nbconvert renders as "Unable to display output for mime type(s):
+# application/vnd.plotly.v1+json".
+pio.renderers.default = "plotly_mimetype+notebook_connected"
+
 
 # ---------------------------------------------------------------------------
 # Pandas / formatting helpers

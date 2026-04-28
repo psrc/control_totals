@@ -1,0 +1,33 @@
+name: Publish validation dashboard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "control_totals/validation/**"
+      - ".github/workflows/publish-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write  # needed to push to gh-pages branch
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: control_totals/validation
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Publish to gh-pages
+        uses: quarto-dev/quarto-actions/publish@v2
+        with:
+          target: gh-pages
+          path: control_totals/validation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

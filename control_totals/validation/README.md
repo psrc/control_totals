@@ -76,6 +76,32 @@ want to regenerate them from scratch:
 Once you start hand-editing the notebooks, **do not re-run that script** —
 it overwrites them.
 
+## Publishing to GitHub Pages
+
+The site is published to a `gh-pages` branch via the
+[`.github/workflows/publish-validation.yml`](../../.github/workflows/publish-validation.yml)
+workflow. It runs automatically on pushes to `main` that touch
+`control_totals/validation/**`, and can also be triggered manually from the
+**Actions** tab. Because notebooks are pre-executed, the workflow only needs
+Quarto — no Python data access required.
+
+**One-time setup** (after the first successful workflow run creates the
+`gh-pages` branch):
+
+1. Repo Settings → Pages
+2. **Source**: *Deploy from a branch*
+3. **Branch**: `gh-pages`, **Folder**: `/ (root)` → Save
+
+The site will be available at `https://<owner>.github.io/<repo>/`. Update
+[`_publish.yml`](_publish.yml) to record the final URL.
+
+**To publish manually from your machine** instead:
+
+```bash
+cd control_totals/validation
+quarto publish gh-pages
+```
+
 ## Pointing at a different run
 
 Edit `config.yaml`:
