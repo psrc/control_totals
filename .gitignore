@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Quarto validation dashboard render output
+control_totals/validation/validation-dashboard/
+control_totals/validation/.quarto/
+control_totals/validation/_freeze/
+

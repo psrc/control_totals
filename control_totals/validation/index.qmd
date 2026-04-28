@@ -1,0 +1,82 @@
+---
+title: "Control Totals Validation"
+date: today
+---
+
+This dashboard summarizes and validates the output of the
+[`control_totals`](../../README.md) pipeline. Each chapter is a
+self-contained Jupyter notebook in `summary_scripts/`.
+
+## What it validates
+
+- **Output vs. input targets** — do the rebased control totals reach the
+  county / RG growth targets at the target year?
+- **Output vs. legacy LUVit** — how do the new control totals compare to
+  results from the legacy R pipeline (`examples/legacy_luvit/output`)?
+- **Internal consistency** — control-area sums add to county and regional
+  totals, no negative values, HCT and non-HCT splits balance.
+
+## Pointing the dashboard at a run
+
+The file `config.yaml` controls which run output is summarized:
+
+```yaml
+example_path: ../../examples/summer_2026   # required
+legacy_path:  ../../examples/legacy_luvit  # optional comparison
+```
+
+Paths are relative to the `validation/` folder. Edit `config.yaml`,
+re-execute the notebooks, then re-render the book.
+
+## Rendering the book
+
+Install [Quarto](https://quarto.org/docs/get-started/) and from the
+`control_totals/validation/` folder run:
+
+```bash
+quarto render
+```
+
+Output is written to `validation-dashboard/`. Notebooks are **not** executed
+on render (`execute.enabled: false`); they ship with their committed
+outputs. To re-execute everything before rendering:
+
+```bash
+jupyter nbconvert --to notebook --execute summary_scripts/*.ipynb --inplace
+quarto render
+```
+
+To render just one notebook (using its committed output):
+
+```bash
+quarto render summary_scripts/population.ipynb
+```
+
+## Adding a new chapter
+
+1. Drop a new `.ipynb` in `summary_scripts/`.
+2. In any cell, import the shared helpers:
+
+   ```python
+   from validation_data_input import load_controls, load_targets, load_settings
+   from util import apply_plotly_theme, COUNTY_NAME
+   ```
+
+3. Execute the notebook (so its outputs are committed).
+4. Add the path to the `chapters:` list in `_quarto.yml`.
+5. `quarto render`.
+
+## Layout reference
+
+```
+validation/
+├── _quarto.yml              book config + sidebar
+├── index.qmd                this page
+├── config.yaml              which run to validate
+├── styling/custom.scss      light/dark theme tweaks
+├── PSRClogo2016path.png     PSRC logo (sidebar)
+└── summary_scripts/
+    ├── util.py              plotly + pandas helpers
+    ├── validation_data_input.py   cached data loaders
+    └── *.ipynb              one chapter per notebook
+```

@@ -1,0 +1,9 @@
+# Validation dashboard configuration.
+# Paths are resolved relative to this file (control_totals/validation/).
+
+# Required: the example whose output/ folder will be summarized.
+example_path: ../../examples/summer_2026
+
+# Optional: legacy LUVit pipeline output for side-by-side comparison.
+# Set to null or remove to skip legacy comparisons.
+legacy_path: ../../examples/legacy_luvit

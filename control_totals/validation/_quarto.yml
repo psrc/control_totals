@@ -1,0 +1,46 @@
+project:
+  type: book
+  output-dir: validation-dashboard
+
+book:
+  title: "Control Totals Validation"
+  subtitle: "PSRC Land Use Vision"
+  date: today
+  search: true
+  sidebar:
+    logo: PSRClogo2016path.png
+    style: docked
+    background: light
+  repo-url: https://github.com/psrc/control_totals
+  page-footer: "Puget Sound Regional Council"
+
+  chapters:
+    - index.qmd
+    - part: "<b>REGIONAL TOTALS</b>"
+      chapters:
+        - summary_scripts/population.ipynb
+        - summary_scripts/housing_units.ipynb
+        - summary_scripts/employment.ipynb
+    - part: "<b>QC</b>"
+      chapters:
+        - summary_scripts/consistency_checks.ipynb
+
+format:
+  html:
+    mainfont: Poppins
+    theme:
+      light: [cosmo, styling/custom.scss]
+      dark: [darkly, styling/custom.scss]
+    toc: true
+    toc-depth: 3
+    code-tools: true
+    code-fold: true
+    fig-width: 9
+    fig-height: 5
+    embed-resources: false
+
+execute:
+  enabled: false
+  echo: false
+  warning: false
+  freeze: true
