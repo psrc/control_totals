@@ -11,8 +11,10 @@ and exposes one function per artifact:
     load_unrolled_regional()  -> long-format yearly regional totals
     load_targets(sheet=...)   -> DataFrame from TargetsRebasedOutput.xlsx
     load_capacity()           -> DataFrame from CapacityPclNoSampling*.csv
-    load_legacy_pop()         -> DataFrame (or None) from legacy total_pop_estimates_all_years.csv
-    load_legacy_units()       -> DataFrame (or None) from legacy units_estimates_all_years.csv
+    load_legacy_unrolled()    -> long-format legacy controls (control_id, year, ...) or None
+    load_legacy_pop()         -> regional legacy population by year, or None
+    load_legacy_units()       -> regional legacy households by year, or None
+    load_legacy_emp()         -> regional legacy employment by year, or None
     available_years()         -> sorted list of stepped years in the controls
 """
 
@@ -166,30 +168,110 @@ def load_capacity() -> pd.DataFrame | None:
     return pd.read_csv(path)
 
 
-def _legacy_csv(name: str) -> pd.DataFrame | None:
+def _find_legacy_workbook() -> Path | None:
+    """Locate the legacy LUVit control-totals workbook in the configured legacy dir.
+
+    Looks for any file matching ``LUVit_ct_by_tod_generator-*.xlsx`` (the
+    legacy R pipeline names them with a date stamp), then falls back to
+    ``Control-Totals-LUVit.xlsx``. Returns the most recently modified match
+    or None if nothing is found.
+    """
     cfg = load_config()
-    if cfg["legacy_dir"] is None:
+    legacy_dir = cfg["legacy_dir"]
+    if legacy_dir is None:
         return None
-    path = cfg["legacy_dir"] / "output" / name
-    if not path.exists():
+    out = legacy_dir / "output"
+    if not out.exists():
+        return None
+    candidates = sorted(out.glob("LUVit_ct_by_tod_generator-*.xlsx"))
+    if not candidates:
+        fallback = out / "Control-Totals-LUVit.xlsx"
+        return fallback if fallback.exists() else None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+@functools.lru_cache(maxsize=1)
+def _load_legacy_unrolled() -> pd.DataFrame | None:
+    """Load the legacy 'unrolled' (long, by subreg/control_id) sheet."""
+    path = _find_legacy_workbook()
+    if path is None:
         return None
     try:
-        df = pd.read_csv(path)
-    except pd.errors.EmptyDataError:
+        xl = pd.ExcelFile(path)
+    except Exception:
         return None
-    return df if not df.empty else None
+
+    # Prefer 'unrolled' / 'unrolled regional' if present; else build from wide
+    # per-indicator sheets.
+    if "unrolled" in xl.sheet_names:
+        df = pd.read_excel(xl, "unrolled").copy()
+        if "subreg_id" in df.columns and "control_id" not in df.columns:
+            df = df.rename(columns={"subreg_id": "control_id"})
+        return df
+
+    # Fall back to wide sheets ('HHPop', 'HH', 'Emp', optionally 'Pop').
+    sheet_to_col = {
+        "HHPop": "total_hhpop",
+        "HH": "total_hh",
+        "Emp": "total_emp",
+        "Pop": "total_pop",
+    }
+    pieces = []
+    for sheet, col in sheet_to_col.items():
+        if sheet not in xl.sheet_names:
+            continue
+        wide = pd.read_excel(xl, sheet)
+        id_col = "control_id" if "control_id" in wide.columns else "subreg_id"
+        long = wide.melt(id_vars=[id_col], var_name="year", value_name=col)
+        long["year"] = pd.to_numeric(long["year"], errors="coerce").astype("Int64")
+        long = long.rename(columns={id_col: "control_id"})
+        pieces.append(long.set_index(["control_id", "year"]))
+    if not pieces:
+        return None
+    out = pd.concat(pieces, axis=1).reset_index()
+    return out
+
+
+@functools.lru_cache(maxsize=1)
+def load_legacy_unrolled() -> pd.DataFrame | None:
+    """Public accessor: legacy long-format controls by control_id and year.
+
+    Columns: ``control_id``, ``year``, and any of ``total_pop``,
+    ``total_hh``, ``total_hhpop``, ``total_emp`` that the legacy workbook
+    contained. Returns ``None`` if no legacy workbook is configured.
+    """
+    df = _load_legacy_unrolled()
+    return None if df is None else df.copy()
+
+
+def _legacy_indicator_by_year(col: str) -> pd.DataFrame | None:
+    df = _load_legacy_unrolled()
+    if df is None or col not in df.columns:
+        return None
+    return (
+        df[["year", col]]
+        .dropna()
+        .groupby("year", as_index=False)
+        .sum()
+    )
 
 
 @functools.lru_cache(maxsize=1)
 def load_legacy_pop() -> pd.DataFrame | None:
-    """Legacy pipeline total_pop_estimates_all_years.csv (or None)."""
-    return _legacy_csv("total_pop_estimates_all_years.csv")
+    """Legacy total population by year (regional). Columns: year, total_pop."""
+    return _legacy_indicator_by_year("total_pop")
 
 
 @functools.lru_cache(maxsize=1)
 def load_legacy_units() -> pd.DataFrame | None:
-    """Legacy pipeline units_estimates_all_years.csv (or None)."""
-    return _legacy_csv("units_estimates_all_years.csv")
+    """Legacy total households by year (regional). Columns: year, total_hh."""
+    return _legacy_indicator_by_year("total_hh")
+
+
+@functools.lru_cache(maxsize=1)
+def load_legacy_emp() -> pd.DataFrame | None:
+    """Legacy total employment by year (regional). Columns: year, total_emp."""
+    return _legacy_indicator_by_year("total_emp")
 
 
 __all__ = [
@@ -201,7 +283,9 @@ __all__ = [
     "load_targets",
     "control_id_lookup",
     "load_capacity",
+    "load_legacy_unrolled",
     "load_legacy_pop",
     "load_legacy_units",
+    "load_legacy_emp",
     "available_years",
 ]

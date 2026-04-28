@@ -19,7 +19,7 @@ book:
     - part: "<b>REGIONAL TOTALS</b>"
       chapters:
         - summary_scripts/population.ipynb
-        - summary_scripts/housing_units.ipynb
+        - summary_scripts/households.ipynb
         - summary_scripts/employment.ipynb
     - part: "<b>QC</b>"
       chapters:

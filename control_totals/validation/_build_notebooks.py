@@ -45,7 +45,8 @@ import plotly.graph_objects as go
 
 from validation_data_input import (
     load_config, load_settings, load_unrolled, load_unrolled_regional,
-    load_targets, control_id_lookup, load_legacy_pop, load_legacy_units,
+    load_targets, control_id_lookup,
+    load_legacy_pop, load_legacy_units, load_legacy_emp,
     available_years,
 )
 from util import (
@@ -140,18 +141,18 @@ def make_population_nb() -> nbformat.NotebookNode:
             "## Notes\n\n"
             "- Base year, targets year, and end year come from "
             "`configs/settings.yaml` of the active example.\n"
-            "- Legacy comparison loads "
-            "`examples/legacy_luvit/output/total_pop_estimates_all_years.csv` "
-            "if present and non-empty."
+            "- Legacy comparison reads the most recent "
+            "`LUVit_ct_by_tod_generator-*.xlsx` (or `Control-Totals-LUVit.xlsx`) "
+            "under the `legacy_path` configured in `validation/config.yaml`."
         ),
     ]
     return new_notebook(cells=cells)
 
 
-def make_housing_units_nb() -> nbformat.NotebookNode:
+def make_households_nb() -> nbformat.NotebookNode:
     cells = [
         new_markdown_cell(
-            "# Housing units\n\n"
+            "# Households\n\n"
             "Household totals by county and growth from base year to targets "
             "year — and the implied delta vs. the input city-level targets."
         ),
@@ -226,12 +227,40 @@ def make_housing_units_nb() -> nbformat.NotebookNode:
             "    pct_cols=['% diff vs. target'], pct_threshold=2,\n"
             ")"
         ),
+        new_markdown_cell("## Regional households — controls vs. legacy LUVit"),
+        new_code_cell(
+            "reg = load_unrolled_regional()[['year', 'total_hh']].copy()\n"
+            "reg['source'] = 'New pipeline'\n"
+            "legacy = load_legacy_units()\n"
+            "frames = [reg]\n"
+            "if legacy is not None and 'total_hh' in legacy.columns:\n"
+            "    leg = legacy[['year', 'total_hh']].copy()\n"
+            "    leg['source'] = 'Legacy LUVit'\n"
+            "    frames.append(leg)\n"
+            "compare = pd.concat(frames, ignore_index=True)\n"
+            "fig = px.line(\n"
+            "    compare, x='year', y='total_hh', color='source', markers=True,\n"
+            "    title='Regional households — pipeline vs. legacy',\n"
+            "    labels={'total_hh': 'Households', 'year': 'Year', 'source': 'Source'},\n"
+            ")\n"
+            "if legacy is None:\n"
+            "    fig.add_annotation(\n"
+            "        text='Legacy LUVit estimates not available for this run.',\n"
+            "        xref='paper', yref='paper', x=0.5, y=1.08,\n"
+            "        showarrow=False, font=dict(color='#888'),\n"
+            "    )\n"
+            "apply_plotly_theme(fig)"
+        ),
         new_markdown_cell(
             "## Notes\n\n"
-            "- `HHGro2350` is the input target growth (`base_year` → "
-            "`targets_end_year`) from `TargetsRebasedOutput.xlsx → CityHH`.\n"
+            "- The growth column in `CityHH` is named `HHGro<base><targets>` "
+            "(e.g. `HHGro2350` for base 2023 and targets 2050) and is sourced "
+            "from `TargetsRebasedOutput.xlsx`.\n"
             "- A small percent difference is expected from rounding and from "
-            "any RG-level scaling applied during interpolation."
+            "any RG-level scaling applied during interpolation.\n"
+            "- Legacy comparison reads the most recent "
+            "`LUVit_ct_by_tod_generator-*.xlsx` under the `legacy_path` "
+            "configured in `validation/config.yaml`."
         ),
     ]
     return new_notebook(cells=cells)
@@ -305,12 +334,39 @@ def make_employment_nb() -> nbformat.NotebookNode:
             "fig.update_layout(showlegend=False)\n"
             "apply_plotly_theme(fig)"
         ),
+        new_markdown_cell("## Regional employment — controls vs. legacy LUVit"),
+        new_code_cell(
+            "reg = load_unrolled_regional()[['year', 'total_emp']].copy()\n"
+            "reg['source'] = 'New pipeline'\n"
+            "legacy = load_legacy_emp()\n"
+            "frames = [reg]\n"
+            "if legacy is not None and 'total_emp' in legacy.columns:\n"
+            "    leg = legacy[['year', 'total_emp']].copy()\n"
+            "    leg['source'] = 'Legacy LUVit'\n"
+            "    frames.append(leg)\n"
+            "compare = pd.concat(frames, ignore_index=True)\n"
+            "fig = px.line(\n"
+            "    compare, x='year', y='total_emp', color='source', markers=True,\n"
+            "    title='Regional employment — pipeline vs. legacy',\n"
+            "    labels={'total_emp': 'Jobs', 'year': 'Year', 'source': 'Source'},\n"
+            ")\n"
+            "if legacy is None:\n"
+            "    fig.add_annotation(\n"
+            "        text='Legacy LUVit estimates not available for this run.',\n"
+            "        xref='paper', yref='paper', x=0.5, y=1.08,\n"
+            "        showarrow=False, font=dict(color='#888'),\n"
+            "    )\n"
+            "apply_plotly_theme(fig)"
+        ),
         new_markdown_cell(
             "## Notes\n\n"
             "- Sector breakdown (e.g. resource/construction split applied in "
             "`emp_chg_targets_*.py`) is not in the final controls workbook; "
             "to validate sector totals, add a new notebook that reads from the "
-            "intermediate HDF5 outputs."
+            "intermediate HDF5 outputs.\n"
+            "- Legacy comparison reads the most recent "
+            "`LUVit_ct_by_tod_generator-*.xlsx` under the `legacy_path` "
+            "configured in `validation/config.yaml`."
         ),
     ]
     return new_notebook(cells=cells)
@@ -420,7 +476,7 @@ def make_consistency_nb() -> nbformat.NotebookNode:
 
 NB_BUILDERS = {
     "population.ipynb":           make_population_nb,
-    "housing_units.ipynb":        make_housing_units_nb,
+    "households.ipynb":           make_households_nb,
     "employment.ipynb":           make_employment_nb,
     "consistency_checks.ipynb":   make_consistency_nb,
 }
