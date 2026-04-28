@@ -97,54 +97,65 @@
     "href": "summary_scripts/population.html#notes",
     "title": "2  Population",
     "section": "2.4 Notes",
-    "text": "2.4 Notes\n\nBase year, targets year, and end year come from configs/settings.yaml of the active example.\nLegacy comparison loads examples/legacy_luvit/output/total_pop_estimates_all_years.csv if present and non-empty.",
+    "text": "2.4 Notes\n\nBase year, targets year, and end year come from configs/settings.yaml of the active example.\nLegacy comparison reads the most recent LUVit_ct_by_tod_generator-*.xlsx (or Control-Totals-LUVit.xlsx) under the legacy_path configured in validation/config.yaml.",
     "crumbs": [
       "<b>REGIONAL TOTALS</b>",
       "<span class='chapter-number'>2</span>  <span class='chapter-title'>Population</span>"
     ]
   },
   {
-    "objectID": "summary_scripts/housing_units.html",
-    "href": "summary_scripts/housing_units.html",
-    "title": "3  Housing units",
+    "objectID": "summary_scripts/households.html",
+    "href": "summary_scripts/households.html",
+    "title": "3  Households",
     "section": "",
     "text": "3.1 Households by county\nHousehold totals by county and growth from base year to targets year — and the implied delta vs. the input city-level targets.\nHH 2023\nHH 2044\nGrowth\n% Growth\n\n\ncounty\n \n \n \n \n\n\n\n\nKing\n952,893\n1,141,705\n188,812\n+19.8%\n\n\nKitsap\n106,813\n130,688\n23,875\n+22.4%\n\n\nPierce\n345,236\n433,147\n87,911\n+25.5%\n\n\nSnohomish\n318,194\n459,469\n141,275\n+44.4%\n\n\nRegion\n1,723,136\n2,165,009\n441,873\n+25.6%",
     "crumbs": [
       "<b>REGIONAL TOTALS</b>",
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Housing units</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Households</span>"
     ]
   },
   {
-    "objectID": "summary_scripts/housing_units.html#growth-base-targets-by-county",
-    "href": "summary_scripts/housing_units.html#growth-base-targets-by-county",
-    "title": "3  Housing units",
+    "objectID": "summary_scripts/households.html#growth-base-targets-by-county",
+    "href": "summary_scripts/households.html#growth-base-targets-by-county",
+    "title": "3  Households",
     "section": "3.2 Growth (base → targets) by county",
     "text": "3.2 Growth (base → targets) by county",
     "crumbs": [
       "<b>REGIONAL TOTALS</b>",
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Housing units</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Households</span>"
     ]
   },
   {
-    "objectID": "summary_scripts/housing_units.html#output-vs.-input-city-targets-cityhh",
-    "href": "summary_scripts/housing_units.html#output-vs.-input-city-targets-cityhh",
-    "title": "3  Housing units",
+    "objectID": "summary_scripts/households.html#output-vs.-input-city-targets-cityhh",
+    "href": "summary_scripts/households.html#output-vs.-input-city-targets-cityhh",
+    "title": "3  Households",
     "section": "3.3 Output vs. input city targets (CityHH)",
     "text": "3.3 Output vs. input city targets (CityHH)\n\n\n\n\n\n\n\n \nTarget growth\nControls growth\nControls − Target\n% diff vs. target\n\n\ncounty\n \n \n \n \n\n\n\n\nKing\n242,764\n188,813\n-53,951\n-22.2%\n\n\nKitsap\n30,702\n23,878\n-6,824\n-22.2%\n\n\nPierce\n113,033\n87,914\n-25,119\n-22.2%\n\n\nSnohomish\n181,640\n141,276\n-40,364\n-22.2%",
     "crumbs": [
       "<b>REGIONAL TOTALS</b>",
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Housing units</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Households</span>"
     ]
   },
   {
-    "objectID": "summary_scripts/housing_units.html#notes",
-    "href": "summary_scripts/housing_units.html#notes",
-    "title": "3  Housing units",
-    "section": "3.4 Notes",
-    "text": "3.4 Notes\n\nHHGro2350 is the input target growth (base_year → targets_end_year) from TargetsRebasedOutput.xlsx → CityHH.\nA small percent difference is expected from rounding and from any RG-level scaling applied during interpolation.",
+    "objectID": "summary_scripts/households.html#regional-households-controls-vs.-legacy-luvit",
+    "href": "summary_scripts/households.html#regional-households-controls-vs.-legacy-luvit",
+    "title": "3  Households",
+    "section": "3.4 Regional households — controls vs. legacy LUVit",
+    "text": "3.4 Regional households — controls vs. legacy LUVit",
     "crumbs": [
       "<b>REGIONAL TOTALS</b>",
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Housing units</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Households</span>"
+    ]
+  },
+  {
+    "objectID": "summary_scripts/households.html#notes",
+    "href": "summary_scripts/households.html#notes",
+    "title": "3  Households",
+    "section": "3.5 Notes",
+    "text": "3.5 Notes\n\nThe growth column in CityHH is named HHGro&lt;base&gt;&lt;targets&gt; (e.g. HHGro2350 for base 2023 and targets 2050) and is sourced from TargetsRebasedOutput.xlsx.\nA small percent difference is expected from rounding and from any RG-level scaling applied during interpolation.\nLegacy comparison reads the most recent LUVit_ct_by_tod_generator-*.xlsx under the legacy_path configured in validation/config.yaml.",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Households</span>"
     ]
   },
   {
@@ -181,11 +192,22 @@
     ]
   },
   {
+    "objectID": "summary_scripts/employment.html#regional-employment-controls-vs.-legacy-luvit",
+    "href": "summary_scripts/employment.html#regional-employment-controls-vs.-legacy-luvit",
+    "title": "4  Employment",
+    "section": "4.4 Regional employment — controls vs. legacy LUVit",
+    "text": "4.4 Regional employment — controls vs. legacy LUVit",
+    "crumbs": [
+      "<b>REGIONAL TOTALS</b>",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Employment</span>"
+    ]
+  },
+  {
     "objectID": "summary_scripts/employment.html#notes",
     "href": "summary_scripts/employment.html#notes",
     "title": "4  Employment",
-    "section": "4.4 Notes",
-    "text": "4.4 Notes\n\nSector breakdown (e.g. resource/construction split applied in emp_chg_targets_*.py) is not in the final controls workbook; to validate sector totals, add a new notebook that reads from the intermediate HDF5 outputs.",
+    "section": "4.5 Notes",
+    "text": "4.5 Notes\n\nSector breakdown (e.g. resource/construction split applied in emp_chg_targets_*.py) is not in the final controls workbook; to validate sector totals, add a new notebook that reads from the intermediate HDF5 outputs.\nLegacy comparison reads the most recent LUVit_ct_by_tod_generator-*.xlsx under the legacy_path configured in validation/config.yaml.",
     "crumbs": [
       "<b>REGIONAL TOTALS</b>",
       "<span class='chapter-number'>4</span>  <span class='chapter-title'>Employment</span>"
