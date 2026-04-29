@@ -1,11 +1,23 @@
 
-# Where is this script
-script.dir <- 'C:/Users/JKolberg/PythonProjects/control_totals/control_totals/r_scripts'
-#script.dir <- '~/psrc/R/control-total-vision2050'
+# Where is this script (auto-detected from Rscript invocation,
+# falls back to current working directory when sourced interactively)
+get_script_dir <- function() {
+    args <- commandArgs(trailingOnly = FALSE)
+    file_arg <- grep("^--file=", args, value = TRUE)
+    if (length(file_arg) > 0) {
+        return(normalizePath(dirname(sub("^--file=", "", file_arg[1]))))
+    }
+    if (!is.null(sys.frames()) && length(sys.frames()) > 0) {
+        sf <- sys.frame(1)
+        if (!is.null(sf$ofile)) return(normalizePath(dirname(sf$ofile)))
+    }
+    return(normalizePath(getwd()))
+}
+script.dir <- get_script_dir()
 
-# Where do the data tables live
-data.dir <- 'C:/Users/JKolberg/PythonProjects/control_totals/examples/legacy_luvit/data'
-#data.dir <- file.path(script.dir, "data")
+# Where do the data tables live (examples/legacy_luvit/data, two levels up
+# from r_scripts/)
+data.dir <- normalizePath(file.path(script.dir, "..", "..", "examples", "legacy_luvit", "data"))
 
 # Should interpolated numbers be rounded
 round.interpolated <- FALSE

@@ -31,7 +31,20 @@ library(raster)
 ### Users settings
 ##################
 # Where is this script
-setwd('C:/Users/jkolberg/PythonProjects/control_totals/control_totals/r_scripts') 
+# auto-detect script location
+get_script_dir <- function() {
+    args <- commandArgs(trailingOnly = FALSE)
+    file_arg <- grep("^--file=", args, value = TRUE)
+    if (length(file_arg) > 0) {
+        return(normalizePath(dirname(sub("^--file=", "", file_arg[1]))))
+    }
+    if (!is.null(sys.frames()) && length(sys.frames()) > 0) {
+        sf <- sys.frame(1)
+        if (!is.null(sf$ofile)) return(normalizePath(dirname(sf$ofile)))
+    }
+    return(normalizePath(getwd()))
+}
+setwd(get_script_dir())
 
 # save in csv file
 save <- TRUE

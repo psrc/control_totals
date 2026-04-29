@@ -20,8 +20,20 @@ library(openxlsx)
 library(RMySQL)
 library(ggplot2)
 
-# working directory
-setwd("C:/Users/jkolberg/PythonProjects/control_totals/control_totals/r_scripts")
+# working directory (auto-detect script location)
+get_script_dir <- function() {
+    args <- commandArgs(trailingOnly = FALSE)
+    file_arg <- grep("^--file=", args, value = TRUE)
+    if (length(file_arg) > 0) {
+        return(normalizePath(dirname(sub("^--file=", "", file_arg[1]))))
+    }
+    if (!is.null(sys.frames()) && length(sys.frames()) > 0) {
+        sf <- sys.frame(1)
+        if (!is.null(sf$ofile)) return(normalizePath(dirname(sf$ofile)))
+    }
+    return(normalizePath(getwd()))
+}
+setwd(get_script_dir())
 
 # Full name of the input file containing the control totals (sheets with not unrolled CTs)
 # This is the output of run_creating_control_totals_from_targets.R from the link above
@@ -83,16 +95,31 @@ if((save.results || do.plot) && !dir.exists(output.dir))
 # Connecting to Mysql
 mysql.connection <- function(dbname = "2018_parcel_baseyear") {
     # credentials can be stored in a file (as one column: username, password, host)
+    # or supplied via environment variables URBANSIM_MYSQL_USER /
+    # URBANSIM_MYSQL_PASSWORD / URBANSIM_MYSQL_HOST.
+    env_un    <- Sys.getenv("URBANSIM_MYSQL_USER",     unset = NA)
+    env_pw    <- Sys.getenv("URBANSIM_MYSQL_PASSWORD", unset = NA)
+    env_host  <- Sys.getenv("URBANSIM_MYSQL_HOST",     unset = NA)
+
     if(file.exists("creds.txt")) {
         creds <- read.table("creds.txt", stringsAsFactors = FALSE)
         un <- creds[1,1]
         psswd <- creds[2,1]
-        if(nrow(creds) > 2) h <- creds[3,1] 
-        else h <- .rs.askForPassword("host:")
+        if(nrow(creds) > 2) h <- creds[3,1]
+        else if(!is.na(env_host) && nzchar(env_host)) h <- env_host
+        else stop("MySQL host not provided. Set URBANSIM_MYSQL_HOST or add a 3rd line to creds.txt.")
+    } else if(!is.na(env_un) && nzchar(env_un) &&
+              !is.na(env_pw) && nzchar(env_pw) &&
+              !is.na(env_host) && nzchar(env_host)) {
+        un    <- env_un
+        psswd <- env_pw
+        h     <- env_host
     } else {
-        un <- .rs.askForPassword("username:")
-        psswd <- .rs.askForPassword("password:")
-        h <- .rs.askForPassword("host:")
+        stop(paste0(
+            "MySQL credentials not found. Either create r_scripts/creds.txt ",
+            "(lines: username, password, host) or set environment variables ",
+            "URBANSIM_MYSQL_USER, URBANSIM_MYSQL_PASSWORD, URBANSIM_MYSQL_HOST."
+        ))
     }
     dbConnect(MySQL(), user = un, password = psswd, dbname = dbname, host = h)
 }
