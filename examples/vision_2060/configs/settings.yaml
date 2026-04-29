@@ -275,7 +275,7 @@ data_tables:
    file: military_bases_control_id_xwalk.csv
 
  - name: ref_projection
-   file: REF_projection.csv
+   file: REF_REMI_v3.3.csv
 
  - name: employment_2018_by_control_area
    file: Employment 2018.csv
@@ -363,7 +363,7 @@ steps:
  - steps.extrapolate_to_controls_year # extrapolates out to the control totals end year from the targets end year
  - steps.create_controls # creates final control totals table by bringing in the non-growth areas
 
-#  - steps.parcels_capacity # calculates capacities
-#  - steps.create_control_totals_rebased_targets # creates rebased targets and interpolated control totals in Python
-#  - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
-#  - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
+ - steps.parcels_capacity # calculates capacities
+ - steps.create_control_totals_rebased_targets # creates rebased targets and interpolated control totals in Python
+ - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
+ - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
