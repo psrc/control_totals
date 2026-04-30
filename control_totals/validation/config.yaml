@@ -1,9 +1,32 @@
 # Validation dashboard configuration.
 # Paths are resolved relative to this file (control_totals/validation/).
+#
+# Each forecast renders as a tab inside every chapter. Display order
+# follows the list order below; the first entry is the default tab.
+#
+# Two backend types:
+#   - type: pipeline    -> reads rebased_control_totals_* from data/pipeline.h5
+#   - type: spreadsheet -> reads HH/HHPop/Pop sheets from a Control-Totals workbook;
+#                          requires xwalk_path + base_year/targets_end_year/end_year
+forecasts:
 
-# Required: the example whose output/ folder will be summarized.
-example_path: ../../examples/summer_2026
+  - name: Vision 2060 Scaled
+    path: ../../examples/vision_2060_scaled
+    type: pipeline
 
-# Optional: legacy LUVit pipeline output for side-by-side comparison.
-# Set to null or remove to skip legacy comparisons.
-legacy_path: ../../examples/legacy_luvit
+  - name: Vision 2060
+    path: ../../examples/vision_2060
+    type: pipeline
+
+  - name: Summer 2026
+    path: ../../examples/summer_2026
+    type: pipeline
+
+  - name: Legacy LUVit (RTP26)
+    path: ../../examples/legacy_luvit_spreadsheet
+    type: spreadsheet
+    spreadsheet_file: output/Control-Totals-RTP26-2025-06-11.xlsx
+    xwalk_path: ../../examples/vision_2060_scaled/data/control_target_xwalk.csv
+    base_year: 2020
+    targets_end_year: 2044
+    end_year: 2050

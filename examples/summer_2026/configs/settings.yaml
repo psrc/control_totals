@@ -96,12 +96,12 @@ rebased_targets:
 #----------------------------
 split_hct:
   base_year_in_targets: null             # defaults to general base_year
-  parcel_base_year: 2018                 # MySQL parcel database year
+  parcel_base_year: 2023                 # MySQL parcel database year
   controls_file: Control-Totals-LUVit.xlsx  # input control totals workbook (in output_dir, from rebased_targets step)
   capacity_file: CapacityPclNoSampling_res50.csv  # parcel capacity CSV (in output_dir)
   base_data_file: inputs/base_data_shares_2023.rda  # base data file (in data_dir)
   creds_file: creds.txt                  # MySQL credentials file (in data_dir)
-  use_mysql: false                       # fetch base data from MySQL instead of file/pipeline
+  use_mysql: true                        # fetch base data from MySQL instead of file/pipeline
   save_base_data_file: false             # persist MySQL-fetched base data to file
   aggregate_no_growth_areas: false       # collapse no-growth geographies before splitting
   round_interpolated: false              # round interpolated values to integers
@@ -162,6 +162,13 @@ ElmerGeo: # database
     - county_id
    id_col: control_id # id column must be an integer
 
+ - name: control_areas
+   sql_table: CONTROL26
+   columns:
+    - control_id
+    - control_name
+   id_col: control_id
+
  - name: blocks
    sql_table: BLOCK2020
    columns:
@@ -180,35 +187,35 @@ ElmerGeo: # database
       - parcel_id
    id_col: parcel_id # id column must be an integer
 
- - name: regional_geographies
-   sql_table: REGIONAL_GEOGRAPHIES
-   columns: ['city_name','cnty_name','feat_type','juris','rgeo_class','class_desc']
+#  - name: regional_geographies
+#    sql_table: REGIONAL_GEOGRAPHIES
+#    columns: ['city_name','cnty_name','feat_type','juris','rgeo_class','class_desc']
 
- - name: county
-   sql_table: COUNTY_BACKGROUND
-   columns: 
-    - county_fip
-    - psrc
+#  - name: county
+#    sql_table: COUNTY_BACKGROUND
+#    columns: 
+#     - county_fip
+#     - psrc
 
- - name: military_bases
-   sql_table: MILITARY_BASES
-   columns: ['milspn_id','name','psrc']
+#  - name: military_bases
+#    sql_table: MILITARY_BASES
+#    columns: ['milspn_id','name','psrc']
 
- - name: tribal_land
-   sql_table: TRIBAL_LAND
-   columns: ['tribal_land']
+#  - name: tribal_land
+#    sql_table: TRIBAL_LAND
+#    columns: ['tribal_land']
 
- - name: natural_resource
-   sql_table: NAT_RESOURCE
-   columns: ['resource']
+#  - name: natural_resource
+#    sql_table: NAT_RESOURCE
+#    columns: ['resource']
 
- - name: national_forest
-   sql_table: NATIONAL_FOREST
-   columns: ['forest_name']
+#  - name: national_forest
+#    sql_table: NATIONAL_FOREST
+#    columns: ['forest_name']
 
- - name: national_park
-   sql_table: NATIONAL_PARK
-   columns: ['park_name']
+#  - name: national_park
+#    sql_table: NATIONAL_PARK
+#    columns: ['park_name']
 
  - name: hct_stops
    sql_table: hct_vision_pts
@@ -336,10 +343,10 @@ shapefiles:
 # Pypyr steps
 #----------------------------
 steps:
- - steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
- - steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
+#  - steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
+#  - steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
  - steps.data_loading.load_data # loads data from csv files into hdf5
- - steps.geoprocessing.create_control_area_geography # creates control area geography by unioning and dissolving regional geographies, military bases, tribal areas, and natural resource areas together
+# - steps.geoprocessing.create_control_area_geography # creates control area geography by unioning and dissolving regional geographies, military bases, tribal areas, and natural resource areas together
  - steps.geoprocessing.flag_hct_parcels # creates hct buffers around transit points and flags parcels that fall within those buffers
  - steps.geoprocessing.block_control_area_xwalk # creates block to control area crosswalk
  - steps.geoprocessing.parcel_control_area_xwalks # creates parcel to control area crosswalk
@@ -360,3 +367,4 @@ steps:
  - steps.create_control_totals_rebased_targets # creates rebased targets and interpolated control totals in Python
  - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
  - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
+ - steps.calculate_units_for_dashboard # calculates units for dashboard based on hct split control totals and parcel capacity

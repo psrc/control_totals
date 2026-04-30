@@ -1,26 +1,26 @@
-"""Cached loaders for validation-dashboard chapter notebooks.
+"""Multi-forecast data loaders for the validation dashboard.
 
-The dashboard is pointed at a particular pipeline run via
-`control_totals/validation/config.yaml`. This module resolves that config
-and exposes one function per artifact:
+Forecasts are listed in ``control_totals/validation/config.yaml`` under
+``forecasts:``. Two backend types are supported:
 
-    load_config()             -> dict
-    load_settings()           -> dict (the run's configs/settings.yaml)
-    load_controls(sheet=...)  -> DataFrame from Control-Totals-LUVit.xlsx
-    load_unrolled()           -> long-format yearly controls by subreg
-    load_unrolled_regional()  -> long-format yearly regional totals
-    load_targets(sheet=...)   -> DataFrame from TargetsRebasedOutput.xlsx
-    load_capacity()           -> DataFrame from CapacityPclNoSampling*.csv
-    load_legacy_unrolled()    -> long-format legacy controls (control_id, year, ...) or None
-    load_legacy_pop()         -> regional legacy population by year, or None
-    load_legacy_units()       -> regional legacy households by year, or None
-    load_legacy_emp()         -> regional legacy employment by year, or None
-    available_years()         -> sorted list of stepped years in the controls
+- ``type: pipeline`` — reads ``rebased_control_totals_*`` tables from the
+  example's ``data/pipeline.h5`` via :class:`control_totals.util.Pipeline`.
+- ``type: spreadsheet`` — reads sheet-per-indicator from a legacy
+  Control-Totals workbook. Year columns are detected automatically.
+
+Each forecast carries its own ``[base_year, targets_end_year, end_year]``
+year set. Helpers gracefully handle missing indicators by returning a
+"Not available" placeholder DataFrame, so a chapter still renders all
+tabs even when one forecast (e.g. the legacy spreadsheet) lacks
+``rebased_control_totals_units``.
 """
 
 from __future__ import annotations
 
 import functools
+import sys
+import warnings
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -29,263 +29,583 @@ import yaml
 
 # This file lives at:
 #   control_totals/validation/summary_scripts/validation_data_input.py
-# config.yaml lives at:
-#   control_totals/validation/config.yaml
-_VALIDATION_DIR = Path(__file__).resolve().parent.parent
+_THIS_FILE = Path(__file__).resolve()
+_VALIDATION_DIR = _THIS_FILE.parent.parent
 _CONFIG_PATH = _VALIDATION_DIR / "config.yaml"
+_PROJECT_ROOT = _VALIDATION_DIR.parent  # control_totals/
+
+# Make `control_totals.util` importable when the notebook is executed from any cwd.
+if str(_PROJECT_ROOT.parent) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT.parent))
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from util import Pipeline  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
-# Config / paths
+# Constants
 # ---------------------------------------------------------------------------
+
+# Counties in display order: King, Pierce, Snohomish, Kitsap.
+COUNTIES: list[tuple[int, str]] = [
+    (53033, "King"),
+    (53053, "Pierce"),
+    (53061, "Snohomish"),
+    (53035, "Kitsap"),
+]
+
+# Map indicator key -> pipeline table name.
+_PIPELINE_TABLES = {
+    "pop": "rebased_control_totals_pop",
+    "hhpop": "rebased_control_totals_hhpop",
+    "hh": "rebased_control_totals_hh",
+    "units": "rebased_control_totals_units",
+}
+
+# Map indicator key -> spreadsheet sheet name. The legacy Control-Totals
+# workbooks ship a ``Pop`` sheet that is all zeros and a ``HHPop`` sheet
+# carrying total population, so we read population out of HHPop. Housing
+# units are not stored in the legacy workbooks at all and therefore omit
+# from this map; the loader returns "Not available" for those.
+_SPREADSHEET_SHEETS = {
+    "pop": "HHPop",
+    "hhpop": "HHPop",
+    "hh": "HH",
+}
+
+INDICATOR_KEYS = ("pop", "hhpop", "hh", "units")
+
+
+# ---------------------------------------------------------------------------
+# Year-column helpers
+# ---------------------------------------------------------------------------
+
+def _year_columns(df: pd.DataFrame) -> list:
+    """Return columns of *df* whose label is a 4-digit year (str or int)."""
+    out = []
+    for col in df.columns:
+        s = str(col)
+        if s.isdigit() and len(s) == 4:
+            out.append(col)
+    return out
+
+
+def _normalize_year_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Coerce 4-digit year column labels to strings, in place-safe copy."""
+    rename = {c: str(c) for c in _year_columns(df)}
+    return df.rename(columns=rename)
+
+
+# ---------------------------------------------------------------------------
+# Backends
+# ---------------------------------------------------------------------------
+
+@dataclass
+class _PipelineBackend:
+    """Backend that reads ``rebased_control_totals_*`` tables from pipeline.h5."""
+
+    path: Path
+
+    @functools.cached_property
+    def _pipeline(self) -> Pipeline:
+        return Pipeline(settings_path=str(self.path / "configs"))
+
+    @functools.cached_property
+    def settings(self) -> dict[str, Any]:
+        return self._pipeline.settings or {}
+
+    @functools.cached_property
+    def _xwalk(self) -> pd.DataFrame | None:
+        cols = ["target_id", "target_name", "control_id", "county_id"]
+        try:
+            return self._pipeline.get_table("control_target_xwalk")[cols].drop_duplicates()
+        except KeyError:
+            return None
+
+    def load_indicator(self, indicator: str) -> pd.DataFrame | None:
+        table = _PIPELINE_TABLES.get(indicator)
+        if table is None:
+            return None
+        if self._xwalk is None:
+            return None
+        try:
+            df = self._pipeline.get_table(table).copy()
+        except KeyError:
+            return None
+        df = _normalize_year_columns(df)
+        df = df.merge(self._xwalk, on="control_id", how="left")
+        year_cols = _year_columns(df)
+        grouped = (
+            df.groupby(["target_id", "target_name", "county_id"], as_index=False)[year_cols]
+            .sum()
+            .sort_values("target_id")
+            .reset_index(drop=True)
+        )
+        return grouped
+
+
+@dataclass
+class _SpreadsheetBackend:
+    """Backend that reads HH/HHPop/Pop sheets from a legacy workbook."""
+
+    workbook_path: Path
+    xwalk_path: Path
+
+    @functools.cached_property
+    def _xwalk(self) -> pd.DataFrame:
+        cols = ["target_id", "target_name", "control_id", "county_id"]
+        df = pd.read_csv(self.xwalk_path)[cols].drop_duplicates()
+        return df
+
+    def load_indicator(self, indicator: str) -> pd.DataFrame | None:
+        sheet = _SPREADSHEET_SHEETS.get(indicator)
+        if sheet is None:
+            return None
+        try:
+            df = pd.read_excel(self.workbook_path, sheet_name=sheet)
+        except (FileNotFoundError, ValueError):
+            return None
+        if "control_id" not in df.columns:
+            return None
+        df = _normalize_year_columns(df)
+        year_cols = _year_columns(df)
+        if not year_cols:
+            return None
+        # Merge on xwalk and aggregate to target_id.
+        merged = df[["control_id"] + year_cols].merge(
+            self._xwalk, on="control_id", how="inner"
+        )
+        if merged.empty:
+            warnings.warn(
+                f"Spreadsheet {self.workbook_path.name!r} sheet {sheet!r}: "
+                "no control_ids matched the xwalk."
+            )
+            return None
+        grouped = (
+            merged.groupby(["target_id", "target_name", "county_id"], as_index=False)[year_cols]
+            .sum()
+            .sort_values("target_id")
+            .reset_index(drop=True)
+        )
+        return grouped
+
+
+# ---------------------------------------------------------------------------
+# Forecast
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Forecast:
+    """One forecast available to the dashboard."""
+
+    id: str
+    name: str
+    years: list[str]
+    backend: Any  # _PipelineBackend | _SpreadsheetBackend
+    type: str = "pipeline"
+
+    def load_indicator(self, indicator: str) -> pd.DataFrame | None:
+        return self.backend.load_indicator(indicator)
+
+
+# ---------------------------------------------------------------------------
+# Config loading
+# ---------------------------------------------------------------------------
+
+def _years_from_settings(settings: dict[str, Any]) -> list[str]:
+    keys = ["base_year", "targets_end_year", "end_year"]
+    out: list[str] = []
+    for k in keys:
+        v = settings.get(k)
+        if v is not None and str(v) not in out:
+            out.append(str(v))
+    return out
+
+
+def _build_forecast(spec: dict[str, Any], idx: int) -> Forecast:
+    """Construct a :class:`Forecast` from a config-yaml entry."""
+    name = spec.get("name") or spec.get("path") or f"forecast_{idx}"
+    fid = spec.get("id") or _slugify(name)
+    ftype = spec.get("type", "pipeline").lower()
+    raw_path = spec.get("path")
+    if not raw_path:
+        raise ValueError(f"Forecast {name!r} missing 'path'.")
+    path = (_VALIDATION_DIR / raw_path).resolve()
+
+    if ftype == "pipeline":
+        backend = _PipelineBackend(path=path)
+        years = _years_from_settings(backend.settings)
+        if not years:
+            years = _years_from_settings(spec)
+    elif ftype == "spreadsheet":
+        wb_rel = spec.get("spreadsheet_file")
+        if not wb_rel:
+            raise ValueError(
+                f"Forecast {name!r}: spreadsheet type requires 'spreadsheet_file'."
+            )
+        wb_path = (path / wb_rel).resolve()
+        xwalk_rel = spec.get("xwalk_path")
+        if xwalk_rel:
+            xwalk_path = (_VALIDATION_DIR / xwalk_rel).resolve()
+        else:
+            xwalk_path = (path / "data" / "control_target_xwalk.csv").resolve()
+        backend = _SpreadsheetBackend(workbook_path=wb_path, xwalk_path=xwalk_path)
+        years = _years_from_settings(spec)
+    else:
+        raise ValueError(f"Forecast {name!r}: unknown type {ftype!r}.")
+
+    return Forecast(id=fid, name=name, years=years, backend=backend, type=ftype)
+
+
+def _slugify(s: str) -> str:
+    out = []
+    for ch in s.lower():
+        if ch.isalnum():
+            out.append(ch)
+        elif ch in (" ", "-", "_", "/", "."):
+            out.append("_")
+    slug = "".join(out).strip("_")
+    while "__" in slug:
+        slug = slug.replace("__", "_")
+    return slug or "forecast"
+
 
 @functools.lru_cache(maxsize=1)
 def load_config() -> dict[str, Any]:
-    """Load and resolve the dashboard's config.yaml."""
+    """Load and validate ``validation/config.yaml``."""
     if not _CONFIG_PATH.exists():
-        raise FileNotFoundError(
-            f"Validation config not found: {_CONFIG_PATH}. "
-            "Create it from the template in index.qmd."
-        )
+        raise FileNotFoundError(f"Validation config not found: {_CONFIG_PATH}")
     with _CONFIG_PATH.open() as f:
         cfg = yaml.safe_load(f) or {}
-
-    example_path = cfg.get("example_path")
-    if not example_path:
-        raise ValueError("config.yaml must set 'example_path'.")
-    cfg["example_dir"] = (_VALIDATION_DIR / example_path).resolve()
-
-    legacy_path = cfg.get("legacy_path")
-    cfg["legacy_dir"] = (_VALIDATION_DIR / legacy_path).resolve() if legacy_path else None
-
-    cfg["output_dir"] = cfg["example_dir"] / "output"
-    cfg["configs_dir"] = cfg["example_dir"] / "configs"
     return cfg
 
 
 @functools.lru_cache(maxsize=1)
-def load_settings() -> dict[str, Any]:
-    """Load the example run's configs/settings.yaml."""
-    cfg = load_config()
-    settings_path = cfg["configs_dir"] / "settings.yaml"
-    with settings_path.open() as f:
-        return yaml.safe_load(f) or {}
+def load_forecasts() -> dict[str, Forecast]:
+    """Build the ordered ``id -> Forecast`` mapping from config.yaml.
 
-
-# ---------------------------------------------------------------------------
-# Output workbooks
-# ---------------------------------------------------------------------------
-
-def _controls_path() -> Path:
-    settings = load_settings()
-    fname = settings.get("rebased_targets", {}).get(
-        "output_controls_file", "Control-Totals-LUVit.xlsx"
-    )
-    return load_config()["output_dir"] / fname
-
-
-def _targets_path() -> Path:
-    settings = load_settings()
-    fname = settings.get("rebased_targets", {}).get(
-        "output_targets_file", "TargetsRebasedOutput.xlsx"
-    )
-    return load_config()["output_dir"] / fname
-
-
-@functools.lru_cache(maxsize=16)
-def load_controls(sheet: str = "unrolled") -> pd.DataFrame:
-    """Load a sheet from Control-Totals-LUVit.xlsx.
-
-    Common sheets:
-      - 'HHPop', 'HH', 'Emp', 'Pop'  : wide format (one column per stepped year)
-      - 'unrolled'                   : long format by subreg_id and year
-      - 'unrolled_regional'          : long format, regional totals by year
-    """
-    path = _controls_path()
-    if not path.exists():
-        raise FileNotFoundError(f"Control totals file not found: {path}")
-    return pd.read_excel(path, sheet_name=sheet)
-
-
-@functools.lru_cache(maxsize=1)
-def load_unrolled() -> pd.DataFrame:
-    """Long-format yearly controls by subregion (control_id)."""
-    df = load_controls("unrolled").copy()
-    # Standardize column name; some pipelines use 'subreg_id', some 'control_id'.
-    if "subreg_id" in df.columns and "control_id" not in df.columns:
-        df = df.rename(columns={"subreg_id": "control_id"})
-    return df
-
-
-@functools.lru_cache(maxsize=1)
-def load_unrolled_regional() -> pd.DataFrame:
-    """Long-format yearly regional totals."""
-    return load_controls("unrolled_regional").copy()
-
-
-@functools.lru_cache(maxsize=16)
-def load_targets(sheet: str = "CityPop") -> pd.DataFrame:
-    """Load a sheet from TargetsRebasedOutput.xlsx.
-
-    Common sheets:
-      - 'RGs'      : RG-level targets (Pop2350, HH50, Emp50, ...)
-      - 'CityPop'  : city / control_id population targets
-      - 'CityHH'   : city / control_id household targets
-      - 'CityEmp'  : city / control_id employment targets
-    """
-    path = _targets_path()
-    if not path.exists():
-        raise FileNotFoundError(f"Rebased targets file not found: {path}")
-    return pd.read_excel(path, sheet_name=sheet)
-
-
-@functools.lru_cache(maxsize=1)
-def control_id_lookup() -> pd.DataFrame:
-    """Map control_id -> (RGID, county_id, Juris) using the targets workbook."""
-    df = load_targets("CityPop")
-    return df[["control_id", "RGID", "county_id", "Juris"]].drop_duplicates()
-
-
-def available_years() -> list[int]:
-    """Stepped years present in the unrolled controls."""
-    return sorted(load_unrolled()["year"].unique().tolist())
-
-
-# ---------------------------------------------------------------------------
-# Other artifacts
-# ---------------------------------------------------------------------------
-
-@functools.lru_cache(maxsize=1)
-def load_capacity() -> pd.DataFrame | None:
-    """Parcel capacity CSV; returns None if not present."""
-    settings = load_settings()
-    fname = settings.get("split_hct", {}).get(
-        "capacity_file", "CapacityPclNoSampling_res50.csv"
-    )
-    path = load_config()["output_dir"] / fname
-    if not path.exists():
-        return None
-    return pd.read_csv(path)
-
-
-def _find_legacy_workbook() -> Path | None:
-    """Locate the legacy LUVit control-totals workbook in the configured legacy dir.
-
-    Looks for any file matching ``LUVit_ct_by_tod_generator-*.xlsx`` (the
-    legacy R pipeline names them with a date stamp), then falls back to
-    ``Control-Totals-LUVit.xlsx``. Returns the most recently modified match
-    or None if nothing is found.
+    Falls back to a single forecast built from the legacy
+    ``example_path`` key if ``forecasts:`` is not defined.
     """
     cfg = load_config()
-    legacy_dir = cfg["legacy_dir"]
-    if legacy_dir is None:
-        return None
-    out = legacy_dir / "output"
-    if not out.exists():
-        return None
-    candidates = sorted(out.glob("LUVit_ct_by_tod_generator-*.xlsx"))
-    if not candidates:
-        fallback = out / "Control-Totals-LUVit.xlsx"
-        return fallback if fallback.exists() else None
-    return max(candidates, key=lambda p: p.stat().st_mtime)
-
-
-@functools.lru_cache(maxsize=1)
-def _load_legacy_unrolled() -> pd.DataFrame | None:
-    """Load the legacy 'unrolled' (long, by subreg/control_id) sheet."""
-    path = _find_legacy_workbook()
-    if path is None:
-        return None
-    try:
-        xl = pd.ExcelFile(path)
-    except Exception:
-        return None
-
-    # Prefer 'unrolled' / 'unrolled regional' if present; else build from wide
-    # per-indicator sheets.
-    if "unrolled" in xl.sheet_names:
-        df = pd.read_excel(xl, "unrolled").copy()
-        if "subreg_id" in df.columns and "control_id" not in df.columns:
-            df = df.rename(columns={"subreg_id": "control_id"})
-        return df
-
-    # Fall back to wide sheets ('HHPop', 'HH', 'Emp', optionally 'Pop').
-    sheet_to_col = {
-        "HHPop": "total_hhpop",
-        "HH": "total_hh",
-        "Emp": "total_emp",
-        "Pop": "total_pop",
-    }
-    pieces = []
-    for sheet, col in sheet_to_col.items():
-        if sheet not in xl.sheet_names:
-            continue
-        wide = pd.read_excel(xl, sheet)
-        id_col = "control_id" if "control_id" in wide.columns else "subreg_id"
-        long = wide.melt(id_vars=[id_col], var_name="year", value_name=col)
-        long["year"] = pd.to_numeric(long["year"], errors="coerce").astype("Int64")
-        long = long.rename(columns={id_col: "control_id"})
-        pieces.append(long.set_index(["control_id", "year"]))
-    if not pieces:
-        return None
-    out = pd.concat(pieces, axis=1).reset_index()
+    specs: list[dict[str, Any]]
+    if cfg.get("forecasts"):
+        specs = list(cfg["forecasts"])
+    elif cfg.get("example_path"):
+        specs = [{
+            "name": "Forecast",
+            "path": cfg["example_path"],
+            "type": "pipeline",
+        }]
+    else:
+        raise ValueError(
+            "validation/config.yaml must define either 'forecasts:' or "
+            "'example_path:' (legacy single-forecast mode)."
+        )
+    out: dict[str, Forecast] = {}
+    for i, spec in enumerate(specs):
+        fc = _build_forecast(spec, i)
+        if fc.id in out:
+            fc.id = f"{fc.id}_{i}"
+        out[fc.id] = fc
     return out
 
 
-@functools.lru_cache(maxsize=1)
-def load_legacy_unrolled() -> pd.DataFrame | None:
-    """Public accessor: legacy long-format controls by control_id and year.
+def forecast_ids() -> list[str]:
+    """Ordered forecast ids matching config.yaml order."""
+    return list(load_forecasts())
 
-    Columns: ``control_id``, ``year``, and any of ``total_pop``,
-    ``total_hh``, ``total_hhpop``, ``total_emp`` that the legacy workbook
-    contained. Returns ``None`` if no legacy workbook is configured.
+
+def forecast_name(forecast_id: str) -> str:
+    return load_forecasts()[forecast_id].name
+
+
+def forecast_years(forecast_id: str) -> list[str]:
+    return list(load_forecasts()[forecast_id].years)
+
+
+# ---------------------------------------------------------------------------
+# Crosswalk + indicators (cached per forecast/indicator)
+# ---------------------------------------------------------------------------
+
+@functools.lru_cache(maxsize=64)
+def load_indicator(forecast_id: str, indicator: str) -> pd.DataFrame | None:
+    """Cached aggregated indicator DataFrame for *forecast_id*.
+
+    Returns ``None`` if the forecast's backend cannot supply the
+    indicator (e.g. spreadsheet forecast with no ``units`` sheet).
+    Result columns: ``target_id, target_name, county_id``, plus one
+    string-labelled year column per available year.
     """
-    df = _load_legacy_unrolled()
-    return None if df is None else df.copy()
+    if indicator not in _PIPELINE_TABLES:
+        raise KeyError(f"Unknown indicator {indicator!r}.")
+    return load_forecasts()[forecast_id].load_indicator(indicator)
 
 
-def _legacy_indicator_by_year(col: str) -> pd.DataFrame | None:
-    df = _load_legacy_unrolled()
-    if df is None or col not in df.columns:
-        return None
+# ---------------------------------------------------------------------------
+# Placeholder DataFrame for "not available"
+# ---------------------------------------------------------------------------
+
+_NOT_AVAILABLE_LABEL = "Not available for this forecast"
+
+
+def _placeholder(years: list[str]) -> pd.DataFrame:
+    cols = years if years else ["—"]
+    df = pd.DataFrame([[_NOT_AVAILABLE_LABEL] + [""] * (len(cols) - 1)], columns=cols)
+    df.index = [""]
+    return df
+
+
+# ---------------------------------------------------------------------------
+# Table builders
+# ---------------------------------------------------------------------------
+
+def _restrict_years(df: pd.DataFrame, years: list[str]) -> list[str]:
+    """Return year labels from *years* that are present in *df*."""
+    return [y for y in years if y in df.columns]
+
+
+def _county_slice(df: pd.DataFrame, county_id: int, years: list[str]) -> pd.DataFrame:
+    sub = df.loc[df["county_id"] == county_id].copy()
+    sub = sub.sort_values("target_id").set_index("target_name")
+    return sub[years]
+
+
+def target_area_table(
+    forecast_id: str,
+    indicator: str,
+    county_id: int,
+    total_label: str = "Total",
+) -> pd.DataFrame:
+    """Wide target-area-by-year counts for one forecast/indicator/county."""
+    fc = load_forecasts()[forecast_id]
+    df = load_indicator(forecast_id, indicator)
+    if df is None:
+        return _placeholder(fc.years)
+    years = _restrict_years(df, fc.years)
+    if not years:
+        return _placeholder(fc.years)
+    sub = _county_slice(df, county_id, years)
+    sub.loc[total_label] = sub.sum(axis=0)
+    return sub
+
+
+def ratio_table(
+    forecast_id: str,
+    numerator: str,
+    denominator: str,
+    county_id: int,
+    formula: str = "ratio",
+    total_label: str = "Total",
+) -> pd.DataFrame:
+    """Wide target-area ratio table (e.g. HH size, vacancy)."""
+    fc = load_forecasts()[forecast_id]
+    num_df = load_indicator(forecast_id, numerator)
+    den_df = load_indicator(forecast_id, denominator)
+    if num_df is None or den_df is None:
+        return _placeholder(fc.years)
+    years = _restrict_years(num_df, fc.years)
+    years = [y for y in years if y in den_df.columns]
+    if not years:
+        return _placeholder(fc.years)
+    num = _county_slice(num_df, county_id, years)
+    den = _county_slice(den_df, county_id, years)
+    if formula == "ratio":
+        ratio = num / den.replace(0, pd.NA)
+        total = num.sum(axis=0) / den.sum(axis=0).replace(0, pd.NA)
+    elif formula == "vacancy":
+        ratio = 1 - num / den.replace(0, pd.NA)
+        total = 1 - num.sum(axis=0) / den.sum(axis=0).replace(0, pd.NA)
+    else:
+        raise ValueError(f"Unknown formula {formula!r}; use 'ratio' or 'vacancy'.")
+    ratio.loc[total_label] = total
+    return ratio
+
+
+def _county_year_matrix(df: pd.DataFrame, years: list[str]) -> pd.DataFrame:
+    grouped = df.groupby("county_id", as_index=True)[years].sum()
+    name_map = dict(COUNTIES)
+    grouped = grouped.reindex([cid for cid, _ in COUNTIES])
+    grouped.index = [name_map[cid] for cid in grouped.index]
+    grouped.index.name = "County"
+    return grouped
+
+
+def region_table(
+    forecast_id: str,
+    indicator: str,
+    total_label: str = "Region",
+) -> pd.DataFrame:
+    """County-by-year totals for one forecast, with a region row."""
+    fc = load_forecasts()[forecast_id]
+    df = load_indicator(forecast_id, indicator)
+    if df is None:
+        return _placeholder(fc.years)
+    years = _restrict_years(df, fc.years)
+    if not years:
+        return _placeholder(fc.years)
+    counties = _county_year_matrix(df, years)
+    counties.loc[total_label] = counties.sum(axis=0)
+    return counties
+
+
+def region_ratio_table(
+    forecast_id: str,
+    numerator: str,
+    denominator: str,
+    formula: str = "ratio",
+    total_label: str = "Region",
+) -> pd.DataFrame:
+    fc = load_forecasts()[forecast_id]
+    num_df = load_indicator(forecast_id, numerator)
+    den_df = load_indicator(forecast_id, denominator)
+    if num_df is None or den_df is None:
+        return _placeholder(fc.years)
+    years = _restrict_years(num_df, fc.years)
+    years = [y for y in years if y in den_df.columns]
+    if not years:
+        return _placeholder(fc.years)
+    num = _county_year_matrix(num_df, years)
+    den = _county_year_matrix(den_df, years)
+    if formula == "ratio":
+        ratio = num / den.replace(0, pd.NA)
+        total = num.sum(axis=0) / den.sum(axis=0).replace(0, pd.NA)
+    elif formula == "vacancy":
+        ratio = 1 - num / den.replace(0, pd.NA)
+        total = 1 - num.sum(axis=0) / den.sum(axis=0).replace(0, pd.NA)
+    else:
+        raise ValueError(f"Unknown formula {formula!r}; use 'ratio' or 'vacancy'.")
+    ratio.loc[total_label] = total
+    return ratio
+
+
+# ---------------------------------------------------------------------------
+# Display formatting
+# ---------------------------------------------------------------------------
+
+def _is_placeholder(df: pd.DataFrame) -> bool:
     return (
-        df[["year", col]]
-        .dropna()
-        .groupby("year", as_index=False)
-        .sum()
+        df.shape[0] == 1
+        and df.iloc[0, 0] == _NOT_AVAILABLE_LABEL
     )
 
 
-@functools.lru_cache(maxsize=1)
-def load_legacy_pop() -> pd.DataFrame | None:
-    """Legacy total population by year (regional). Columns: year, total_pop."""
-    return _legacy_indicator_by_year("total_pop")
+def format_counts(df: pd.DataFrame):
+    """Render counts with thousands separators and no decimals."""
+    if _is_placeholder(df):
+        return df.style
+    return df.style.format("{:,.0f}", na_rep="-")
 
 
-@functools.lru_cache(maxsize=1)
-def load_legacy_units() -> pd.DataFrame | None:
-    """Legacy total households by year (regional). Columns: year, total_hh."""
-    return _legacy_indicator_by_year("total_hh")
+def format_ratio(df: pd.DataFrame, decimals: int = 2):
+    """Render ratios with fixed decimal places."""
+    if _is_placeholder(df):
+        return df.style
+    fmt = f"{{:.{decimals}f}}"
+    return df.style.format(fmt, na_rep="-")
 
 
-@functools.lru_cache(maxsize=1)
-def load_legacy_emp() -> pd.DataFrame | None:
-    """Legacy total employment by year (regional). Columns: year, total_emp."""
-    return _legacy_indicator_by_year("total_emp")
+# ---------------------------------------------------------------------------
+# Tabset rendering (Quarto panel-tabset)
+# ---------------------------------------------------------------------------
+
+def display_tabset(builder, ids: list[str] | None = None) -> None:
+    """Render a Quarto panel-tabset, one tab per forecast.
+
+    Args:
+        builder: Callable taking a forecast id and returning a value
+            suitable for ``IPython.display.display`` (typically a
+            pandas Styler or DataFrame).
+        ids: Optional list of forecast ids to display; defaults to all
+            configured forecasts in config.yaml order.
+    """
+    from IPython.display import Markdown, display
+
+    ids = ids or forecast_ids()
+    parts: list[str] = ["::: {.panel-tabset}", ""]
+    for fid in ids:
+        parts.append(f"### {forecast_name(fid)}")
+        parts.append("")
+        try:
+            obj = builder(fid)
+        except Exception as err:  # pragma: no cover - defensive
+            parts.append(f"*Error rendering forecast {fid!r}: {err}*")
+            parts.append("")
+            continue
+        # Render Styler / DataFrame to HTML so the whole tabset can be
+        # emitted as a single Markdown block (Quarto requires the tab
+        # headings to live inside the same markdown output as the
+        # ``:::`` fence markers).
+        if hasattr(obj, "to_html"):
+            html = obj.to_html()
+        else:
+            html = str(obj)
+        parts.append(html)
+        parts.append("")
+    parts.append(":::")
+    display(Markdown("\n".join(parts)))
+
+
+def show_indicator_county(indicator: str, county_id: int) -> None:
+    """Display a per-county panel-tabset of count tables for *indicator*."""
+    display_tabset(lambda fid: format_counts(target_area_table(fid, indicator, county_id)))
+
+
+def show_ratio_county(
+    numerator: str,
+    denominator: str,
+    county_id: int,
+    formula: str = "ratio",
+    decimals: int = 2,
+) -> None:
+    """Display a per-county panel-tabset of ratio tables."""
+    display_tabset(
+        lambda fid: format_ratio(
+            ratio_table(fid, numerator, denominator, county_id, formula=formula),
+            decimals=decimals,
+        )
+    )
+
+
+def show_region_indicator(indicator: str) -> None:
+    """Display a region-level panel-tabset of count tables."""
+    display_tabset(lambda fid: format_counts(region_table(fid, indicator)))
+
+
+def show_region_ratio(
+    numerator: str,
+    denominator: str,
+    formula: str = "ratio",
+    decimals: int = 2,
+) -> None:
+    """Display a region-level panel-tabset of ratio tables."""
+    display_tabset(
+        lambda fid: format_ratio(
+            region_ratio_table(fid, numerator, denominator, formula=formula),
+            decimals=decimals,
+        )
+    )
 
 
 __all__ = [
+    "COUNTIES",
+    "Forecast",
     "load_config",
-    "load_settings",
-    "load_controls",
-    "load_unrolled",
-    "load_unrolled_regional",
-    "load_targets",
-    "control_id_lookup",
-    "load_capacity",
-    "load_legacy_unrolled",
-    "load_legacy_pop",
-    "load_legacy_units",
-    "load_legacy_emp",
-    "available_years",
+    "load_forecasts",
+    "forecast_ids",
+    "forecast_name",
+    "forecast_years",
+    "load_indicator",
+    "target_area_table",
+    "ratio_table",
+    "region_table",
+    "region_ratio_table",
+    "format_counts",
+    "format_ratio",
+    "display_tabset",
+    "show_indicator_county",
+    "show_ratio_county",
+    "show_region_indicator",
+    "show_region_ratio",
 ]

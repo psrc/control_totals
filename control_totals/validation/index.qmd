@@ -7,26 +7,85 @@ This dashboard summarizes and validates the output of the
 [`control_totals`](../../README.md) pipeline. Each chapter is a
 self-contained Jupyter notebook in `summary_scripts/`.
 
-## What it validates
+## What it shows
 
-- **Output vs. input targets** — do the rebased control totals reach the
-  county / RG growth targets at the target year?
-- **Output vs. legacy LUVit** — how do the new control totals compare to
-  results from the legacy R pipeline (`examples/legacy_luvit/output`)?
-- **Internal consistency** — control-area sums add to county and regional
-  totals, no negative values, HCT and non-HCT splits balance.
+Each chapter compares one or more **forecasts** side-by-side using
+Quarto tabsets — one tab per forecast configured in `config.yaml`.
 
-## Pointing the dashboard at a run
+The first chapter (**Region**) shows region-wide totals. The remaining
+six chapters break each indicator down by **target area**
+(the `target_id` geography defined in `control_target_xwalk`),
+with one section per PSRC county (King, Pierce, Snohomish, Kitsap):
 
-The file `config.yaml` controls which run output is summarized:
+- **Population** — `rebased_control_totals_pop`
+- **Household Population** — `rebased_control_totals_hhpop`
+- **Households** — `rebased_control_totals_hh`
+- **Housing Units** — `rebased_control_totals_units`
+- **Household Size** — household population ÷ households
+- **Vacancy Rate** — 1 − (households ÷ housing units)
+
+Year columns are picked per forecast (each forecast may have a different
+base year, targets end year, and final end year). County "Total" rows
+are recomputed from the underlying counts; ratio "Total" rows are
+recomputed from the summed numerator and denominator (not averaged).
+
+## Forecasts in this dashboard
+
+| Forecast | Targets vintage | REMI scaling | Notes |
+|---|---|---|---|
+| **Vision 2060 Scaled** | 2026 targets | Scaled to REMI v3.3 | Pipeline run |
+| **Vision 2060**        | 2026 targets | Not scaled         | Pipeline run |
+| **Summer 2026**        | 2026 targets | Not scaled         | Pipeline run |
+| **Legacy LUVit (RTP26)** | 2021 targets | Not scaled       | Legacy Control-Totals spreadsheet (RTP26, 2025-06-11) |
+
+Both Vision forecasts and Summer 2026 use the updated **2026** county
+targets; Legacy LUVit (RTP26) carries the older **2021** targets.
+Only **Vision 2060 Scaled** has been rescaled to match the
+**REMI v3.3** regional forecast — the others retain their native
+target totals.
+
+## Pointing the dashboard at runs
+
+The file `config.yaml` lists the forecasts to display. Each entry is
+either a `pipeline` forecast (a directory with `data/pipeline.h5`
+produced by `control_totals/run.py`) or a `spreadsheet` forecast
+(a legacy LUVit-style Control Totals Excel workbook).
 
 ```yaml
-example_path: ../../examples/summer_2026   # required
-legacy_path:  ../../examples/legacy_luvit  # optional comparison
+forecasts:
+  # Pipeline run — years come from configs/settings.yaml
+  - name: Vision 2060 Scaled
+    path: ../../examples/vision_2060_scaled
+    type: pipeline
+
+  - name: Vision 2060
+    path: ../../examples/vision_2060
+    type: pipeline
+
+  - name: Summer 2026
+    path: ../../examples/summer_2026
+    type: pipeline
+
+  # Legacy Control Totals workbook — years are declared inline,
+  # and an external xwalk maps target_id → county.
+  - name: Legacy LUVit (RTP26)
+    path: ../../examples/legacy_luvit_spreadsheet
+    type: spreadsheet
+    spreadsheet_file: output/Control-Totals-RTP26-2025-06-11.xlsx
+    xwalk_path: ../../examples/vision_2060_scaled/data/control_target_xwalk.csv
+    base_year: 2020
+    targets_end_year: 2044
+    end_year: 2050
 ```
 
 Paths are relative to the `validation/` folder. Edit `config.yaml`,
 re-execute the notebooks, then re-render the book.
+
+Forecasts that do not contain data for a given indicator (for example,
+the legacy workbook does not include housing units, and a pipeline run
+that has not yet produced rebased control totals) render a small
+"Not available for this forecast" placeholder in their tab instead of
+breaking the page.
 
 ## Rendering the book
 
@@ -37,9 +96,9 @@ Install [Quarto](https://quarto.org/docs/get-started/) and from the
 quarto render
 ```
 
-Output is written to `validation-dashboard/`. Notebooks are **not** executed
-on render (`execute.enabled: false`); they ship with their committed
-outputs. To re-execute everything before rendering:
+Output is written to `validation-dashboard/`. Notebooks are **not**
+executed on render (`execute.enabled: false`); they ship with their
+committed outputs. To re-execute everything before rendering:
 
 ```bash
 jupyter nbconvert --to notebook --execute summary_scripts/*.ipynb --inplace
@@ -58,9 +117,20 @@ quarto render summary_scripts/population.ipynb
 2. In any cell, import the shared helpers:
 
    ```python
-   from validation_data_input import load_controls, load_targets, load_settings
-   from util import apply_plotly_theme, COUNTY_NAME
+   from validation_data_input import (
+       show_indicator_county, show_ratio_county,
+       show_region_indicator, show_region_ratio,
+       target_area_table, ratio_table,
+       format_counts, format_ratio,
+       forecast_ids, forecast_name,
+       COUNTIES,
+   )
    ```
+
+   The `show_*` helpers emit a Quarto `panel-tabset` with one tab per
+   configured forecast. For ad-hoc analyses, use `target_area_table`,
+   `ratio_table`, and the formatters directly with a specific
+   forecast id (see `forecast_ids()`).
 
 3. Execute the notebook (so its outputs are committed).
 4. Add the path to the `chapters:` list in `_quarto.yml`.
@@ -72,11 +142,11 @@ quarto render summary_scripts/population.ipynb
 validation/
 ├── _quarto.yml              book config + sidebar
 ├── index.qmd                this page
-├── config.yaml              which run to validate
+├── config.yaml              which forecast(s) to validate
 ├── styling/custom.scss      light/dark theme tweaks
 ├── PSRClogo2016path.png     PSRC logo (sidebar)
 └── summary_scripts/
     ├── util.py              plotly + pandas helpers
-    ├── validation_data_input.py   cached data loaders
+    ├── validation_data_input.py   multi-forecast loaders + tabset helpers
     └── *.ipynb              one chapter per notebook
 ```

@@ -12,7 +12,30 @@ $link-color: $primary !default;
 
 .quarto-title-block .quarto-title h1.title { font-weight: 600; }
 
-table.dataframe { font-size: 0.9rem; }
-table.dataframe th { background: rgba(0, 85, 140, 0.08); }
+// Pandas DataFrame and Styler tables (Styler emits id="T_..." with no class)
+table.dataframe,
+table[id^="T_"] {
+  font-size: 0.9rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+table.dataframe th,
+table.dataframe td,
+table[id^="T_"] th,
+table[id^="T_"] td {
+  padding: 0.4rem 1rem;
+}
+table.dataframe th,
+table[id^="T_"] thead th {
+  background: rgba(0, 85, 140, 0.08);
+}
+table.dataframe td,
+table[id^="T_"] td {
+  text-align: right;
+}
+table.dataframe tbody th,
+table[id^="T_"] tbody th {
+  text-align: left;
+}
 
 .callout { border-radius: 6px; }

@@ -16,14 +16,15 @@ book:
 
   chapters:
     - index.qmd
-    - part: "<b>REGIONAL TOTALS</b>"
+    - part: "<b>FORECASTS BY TARGET AREA</b>"
       chapters:
+        - summary_scripts/region.ipynb
         - summary_scripts/population.ipynb
+        - summary_scripts/household_population.ipynb
         - summary_scripts/households.ipynb
-        - summary_scripts/employment.ipynb
-    - part: "<b>QC</b>"
-      chapters:
-        - summary_scripts/consistency_checks.ipynb
+        - summary_scripts/housing_units.ipynb
+        - summary_scripts/household_size.ipynb
+        - summary_scripts/vacancy_rate.ipynb
 
 format:
   html:

@@ -85,7 +85,7 @@ nat_resource_sliver_buffer: 500 # buffer distance in feet for identifying sliver
 #----------------------------
 rebased_targets:
   input_file: control_id_working.xlsx    # city-level targets input file (in data_dir)
-  scale_to_ref: false                    # scale interpolated controls to regional reference projection
+  scale_to_ref: true                     # scale interpolated controls to regional reference projection
   round_interpolated: false              # round interpolated values to integers
   stepped_years: [2023, 2025, 2030, 2035, 2040, 2044, 2050, 2055, 2060] # years for stepped (5-year interval) output
   output_targets_file: TargetsRebasedOutput.xlsx   # rebased targets workbook filename (in output_dir)
@@ -96,7 +96,7 @@ rebased_targets:
 #----------------------------
 split_hct:
   base_year_in_targets: null             # defaults to general base_year
-  parcel_base_year: 2023                 # MySQL parcel database year
+  parcel_base_year: 2023               # MySQL parcel database year
   controls_file: Control-Totals-LUVit.xlsx  # input control totals workbook (in output_dir, from rebased_targets step)
   capacity_file: CapacityPclNoSampling_res50.csv  # parcel capacity CSV (in output_dir)
   use_mysql: true                        # fetch base data from MySQL instead of file/pipeline

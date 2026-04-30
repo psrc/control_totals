@@ -178,6 +178,7 @@ def run_step(context):
         dict: The updated pypyr context dictionary.
     """
     # Initialize pipeline and load parcel point geometries
+    print("Flagging parcels by HCT buffer zones...")
     p = Pipeline(settings_path=context["configs_dir"])
     parcels = p.get_geodataframe("parcel_pts_current")
     

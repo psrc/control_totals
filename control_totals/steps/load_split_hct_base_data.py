@@ -100,8 +100,13 @@ def load_base_data_from_mysql(base_db, creds_path, user_env='URBANSIM_MYSQL_USER
 
 def aggregate_base_data(p, base_data):
 	parcels_hct = p.get_table('current_parcel_control_area_xwalk')[['parcel_id', 'subreg_id', 'control_id']]
-	base_data = base_data.merge(parcels_hct, on='parcel_id')
+	# Left-join from the xwalk so control areas whose parcels had no households
+	# or jobs in the parcel-base-year MySQL DB still appear (with zeros) rather
+	# than being dropped by an inner-join.
+	base_data = parcels_hct.merge(base_data, on='parcel_id', how='left')
 	agg_cols = ['households', 'persons', 'jobs']
+	for col in agg_cols:
+		base_data[col] = base_data[col].fillna(0)
 	base_data = base_data.groupby(['subreg_id', 'control_id'], as_index=False)[agg_cols].sum()
 	base_data.rename(columns={'subreg_id': 'split_geo_id', 'control_id': 'nosplit_geo_id'}, inplace=True)
 
