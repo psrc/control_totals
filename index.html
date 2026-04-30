@@ -69,7 +69,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./summary_scripts/population.html" rel="next">
+<link href="./summary_scripts/region.html" rel="next">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -81,9 +81,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-cf0baea712c587c4616c84a6cd29392a.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-163c5560cfdb1100aa6da3140244ca5b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-cf0baea712c587c4616c84a6cd29392a.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-c823bd76a88fb584f032ae70def249f7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-2eaba71b28f6b6f3b989f1c9c04a8048.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-c823bd76a88fb584f032ae70def249f7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -328,7 +328,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text"><b>REGIONAL TOTALS</b></span></a>
+ <span class="menu-text"><b>FORECASTS BY TARGET AREA</b></span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -336,37 +336,44 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./summary_scripts/region.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Region</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./summary_scripts/population.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Population</span></span></a>
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Population</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./summary_scripts/household_population.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Household Population</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./summary_scripts/households.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Households</span></span></a>
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Households</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./summary_scripts/employment.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Employment</span></span></a>
+  <a href="./summary_scripts/housing_units.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Housing Units</span></span></a>
   </div>
 </li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text"><b>QC</b></span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./summary_scripts/consistency_checks.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Consistency checks</span></span></a>
+  <a href="./summary_scripts/household_size.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Household Size</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./summary_scripts/vacancy_rate.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Vacancy Rate</span></span></a>
   </div>
 </li>
       </ul>
@@ -381,11 +388,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#what-it-validates" id="toc-what-it-validates" class="nav-link active" data-scroll-target="#what-it-validates"><span class="header-section-number">0.1</span> What it validates</a></li>
-  <li><a href="#pointing-the-dashboard-at-a-run" id="toc-pointing-the-dashboard-at-a-run" class="nav-link" data-scroll-target="#pointing-the-dashboard-at-a-run"><span class="header-section-number">0.2</span> Pointing the dashboard at a run</a></li>
-  <li><a href="#rendering-the-book" id="toc-rendering-the-book" class="nav-link" data-scroll-target="#rendering-the-book"><span class="header-section-number">0.3</span> Rendering the book</a></li>
-  <li><a href="#adding-a-new-chapter" id="toc-adding-a-new-chapter" class="nav-link" data-scroll-target="#adding-a-new-chapter"><span class="header-section-number">0.4</span> Adding a new chapter</a></li>
-  <li><a href="#layout-reference" id="toc-layout-reference" class="nav-link" data-scroll-target="#layout-reference"><span class="header-section-number">0.5</span> Layout reference</a></li>
+  <li><a href="#what-it-shows" id="toc-what-it-shows" class="nav-link active" data-scroll-target="#what-it-shows"><span class="header-section-number">0.1</span> What it shows</a></li>
+  <li><a href="#forecasts-in-this-dashboard" id="toc-forecasts-in-this-dashboard" class="nav-link" data-scroll-target="#forecasts-in-this-dashboard"><span class="header-section-number">0.2</span> Forecasts in this dashboard</a></li>
+  <li><a href="#pointing-the-dashboard-at-runs" id="toc-pointing-the-dashboard-at-runs" class="nav-link" data-scroll-target="#pointing-the-dashboard-at-runs"><span class="header-section-number">0.3</span> Pointing the dashboard at runs</a></li>
+  <li><a href="#rendering-the-book" id="toc-rendering-the-book" class="nav-link" data-scroll-target="#rendering-the-book"><span class="header-section-number">0.4</span> Rendering the book</a></li>
+  <li><a href="#adding-a-new-chapter" id="toc-adding-a-new-chapter" class="nav-link" data-scroll-target="#adding-a-new-chapter"><span class="header-section-number">0.5</span> Adding a new chapter</a></li>
+  <li><a href="#layout-reference" id="toc-layout-reference" class="nav-link" data-scroll-target="#layout-reference"><span class="header-section-number">0.6</span> Layout reference</a></li>
   </ul>
 </nav>
     </div>
@@ -420,23 +428,98 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p>This dashboard summarizes and validates the output of the <a href="../../README.md"><code>control_totals</code></a> pipeline. Each chapter is a self-contained Jupyter notebook in <code>summary_scripts/</code>.</p>
-<section id="what-it-validates" class="level2" data-number="0.1">
-<h2 data-number="0.1" class="anchored" data-anchor-id="what-it-validates"><span class="header-section-number">0.1</span> What it validates</h2>
+<section id="what-it-shows" class="level2" data-number="0.1">
+<h2 data-number="0.1" class="anchored" data-anchor-id="what-it-shows"><span class="header-section-number">0.1</span> What it shows</h2>
+<p>Each chapter compares one or more <strong>forecasts</strong> side-by-side using Quarto tabsets — one tab per forecast configured in <code>config.yaml</code>.</p>
+<p>The first chapter (<strong>Region</strong>) shows region-wide totals. The remaining six chapters break each indicator down by <strong>target area</strong> (the <code>target_id</code> geography defined in <code>control_target_xwalk</code>), with one section per PSRC county (King, Pierce, Snohomish, Kitsap):</p>
 <ul>
-<li><strong>Output vs.&nbsp;input targets</strong> — do the rebased control totals reach the county / RG growth targets at the target year?</li>
-<li><strong>Output vs.&nbsp;legacy LUVit</strong> — how do the new control totals compare to results from the legacy R pipeline (<code>examples/legacy_luvit/output</code>)?</li>
-<li><strong>Internal consistency</strong> — control-area sums add to county and regional totals, no negative values, HCT and non-HCT splits balance.</li>
+<li><strong>Population</strong> — <code>rebased_control_totals_pop</code></li>
+<li><strong>Household Population</strong> — <code>rebased_control_totals_hhpop</code></li>
+<li><strong>Households</strong> — <code>rebased_control_totals_hh</code></li>
+<li><strong>Housing Units</strong> — <code>rebased_control_totals_units</code></li>
+<li><strong>Household Size</strong> — household population ÷ households</li>
+<li><strong>Vacancy Rate</strong> — 1 − (households ÷ housing units)</li>
 </ul>
+<p>Year columns are picked per forecast (each forecast may have a different base year, targets end year, and final end year). County “Total” rows are recomputed from the underlying counts; ratio “Total” rows are recomputed from the summed numerator and denominator (not averaged).</p>
 </section>
-<section id="pointing-the-dashboard-at-a-run" class="level2" data-number="0.2">
-<h2 data-number="0.2" class="anchored" data-anchor-id="pointing-the-dashboard-at-a-run"><span class="header-section-number">0.2</span> Pointing the dashboard at a run</h2>
-<p>The file <code>config.yaml</code> controls which run output is summarized:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">example_path</span><span class="kw">:</span><span class="at"> ../../examples/summer_2026</span><span class="co">   # required</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">legacy_path</span><span class="kw">:</span><span class="at">  ../../examples/legacy_luvit</span><span class="co">  # optional comparison</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="forecasts-in-this-dashboard" class="level2" data-number="0.2">
+<h2 data-number="0.2" class="anchored" data-anchor-id="forecasts-in-this-dashboard"><span class="header-section-number">0.2</span> Forecasts in this dashboard</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Forecast</th>
+<th>Targets vintage</th>
+<th>REMI scaling</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Vision 2060 Scaled</strong></td>
+<td>2026 targets</td>
+<td>Scaled to REMI v3.3</td>
+<td>Pipeline run</td>
+</tr>
+<tr class="even">
+<td><strong>Vision 2060</strong></td>
+<td>2026 targets</td>
+<td>Not scaled</td>
+<td>Pipeline run</td>
+</tr>
+<tr class="odd">
+<td><strong>Summer 2026</strong></td>
+<td>2026 targets</td>
+<td>Not scaled</td>
+<td>Pipeline run</td>
+</tr>
+<tr class="even">
+<td><strong>Legacy LUVit (RTP26)</strong></td>
+<td>2021 targets</td>
+<td>Not scaled</td>
+<td>Legacy Control-Totals spreadsheet (RTP26, 2025-06-11)</td>
+</tr>
+</tbody>
+</table>
+<p>Both Vision forecasts and Summer 2026 use the updated <strong>2026</strong> county targets; Legacy LUVit (RTP26) carries the older <strong>2021</strong> targets. Only <strong>Vision 2060 Scaled</strong> has been rescaled to match the <strong>REMI v3.3</strong> regional forecast — the others retain their native target totals.</p>
+</section>
+<section id="pointing-the-dashboard-at-runs" class="level2" data-number="0.3">
+<h2 data-number="0.3" class="anchored" data-anchor-id="pointing-the-dashboard-at-runs"><span class="header-section-number">0.3</span> Pointing the dashboard at runs</h2>
+<p>The file <code>config.yaml</code> lists the forecasts to display. Each entry is either a <code>pipeline</code> forecast (a directory with <code>data/pipeline.h5</code> produced by <code>control_totals/run.py</code>) or a <code>spreadsheet</code> forecast (a legacy LUVit-style Control Totals Excel workbook).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">forecasts</span><span class="kw">:</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">  # Pipeline run — years come from configs/settings.yaml</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Vision 2060 Scaled</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">path</span><span class="kw">:</span><span class="at"> ../../examples/vision_2060_scaled</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">type</span><span class="kw">:</span><span class="at"> pipeline</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Vision 2060</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">path</span><span class="kw">:</span><span class="at"> ../../examples/vision_2060</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">type</span><span class="kw">:</span><span class="at"> pipeline</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Summer 2026</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">path</span><span class="kw">:</span><span class="at"> ../../examples/summer_2026</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">type</span><span class="kw">:</span><span class="at"> pipeline</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">  # Legacy Control Totals workbook — years are declared inline,</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">  # and an external xwalk maps target_id → county.</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Legacy LUVit (RTP26)</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">path</span><span class="kw">:</span><span class="at"> ../../examples/legacy_luvit_spreadsheet</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">type</span><span class="kw">:</span><span class="at"> spreadsheet</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">spreadsheet_file</span><span class="kw">:</span><span class="at"> output/Control-Totals-RTP26-2025-06-11.xlsx</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">xwalk_path</span><span class="kw">:</span><span class="at"> ../../examples/vision_2060_scaled/data/control_target_xwalk.csv</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">base_year</span><span class="kw">:</span><span class="at"> </span><span class="dv">2020</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">targets_end_year</span><span class="kw">:</span><span class="at"> </span><span class="dv">2044</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">end_year</span><span class="kw">:</span><span class="at"> </span><span class="dv">2050</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Paths are relative to the <code>validation/</code> folder. Edit <code>config.yaml</code>, re-execute the notebooks, then re-render the book.</p>
+<p>Forecasts that do not contain data for a given indicator (for example, the legacy workbook does not include housing units, and a pipeline run that has not yet produced rebased control totals) render a small “Not available for this forecast” placeholder in their tab instead of breaking the page.</p>
 </section>
-<section id="rendering-the-book" class="level2" data-number="0.3">
-<h2 data-number="0.3" class="anchored" data-anchor-id="rendering-the-book"><span class="header-section-number">0.3</span> Rendering the book</h2>
+<section id="rendering-the-book" class="level2" data-number="0.4">
+<h2 data-number="0.4" class="anchored" data-anchor-id="rendering-the-book"><span class="header-section-number">0.4</span> Rendering the book</h2>
 <p>Install <a href="https://quarto.org/docs/get-started/">Quarto</a> and from the <code>control_totals/validation/</code> folder run:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Output is written to <code>validation-dashboard/</code>. Notebooks are <strong>not</strong> executed on render (<code>execute.enabled: false</code>); they ship with their committed outputs. To re-execute everything before rendering:</p>
@@ -445,29 +528,36 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>To render just one notebook (using its committed output):</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render summary_scripts/population.ipynb</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
-<section id="adding-a-new-chapter" class="level2" data-number="0.4">
-<h2 data-number="0.4" class="anchored" data-anchor-id="adding-a-new-chapter"><span class="header-section-number">0.4</span> Adding a new chapter</h2>
+<section id="adding-a-new-chapter" class="level2" data-number="0.5">
+<h2 data-number="0.5" class="anchored" data-anchor-id="adding-a-new-chapter"><span class="header-section-number">0.5</span> Adding a new chapter</h2>
 <ol type="1">
 <li><p>Drop a new <code>.ipynb</code> in <code>summary_scripts/</code>.</p></li>
 <li><p>In any cell, import the shared helpers:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> validation_data_input <span class="im">import</span> load_controls, load_targets, load_settings</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> util <span class="im">import</span> apply_plotly_theme, COUNTY_NAME</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> validation_data_input <span class="im">import</span> (</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    show_indicator_county, show_ratio_county,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    show_region_indicator, show_region_ratio,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    target_area_table, ratio_table,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    format_counts, format_ratio,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    forecast_ids, forecast_name,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    COUNTIES,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>show_*</code> helpers emit a Quarto <code>panel-tabset</code> with one tab per configured forecast. For ad-hoc analyses, use <code>target_area_table</code>, <code>ratio_table</code>, and the formatters directly with a specific forecast id (see <code>forecast_ids()</code>).</p></li>
 <li><p>Execute the notebook (so its outputs are committed).</p></li>
 <li><p>Add the path to the <code>chapters:</code> list in <code>_quarto.yml</code>.</p></li>
 <li><p><code>quarto render</code>.</p></li>
 </ol>
 </section>
-<section id="layout-reference" class="level2" data-number="0.5">
-<h2 data-number="0.5" class="anchored" data-anchor-id="layout-reference"><span class="header-section-number">0.5</span> Layout reference</h2>
+<section id="layout-reference" class="level2" data-number="0.6">
+<h2 data-number="0.6" class="anchored" data-anchor-id="layout-reference"><span class="header-section-number">0.6</span> Layout reference</h2>
 <pre><code>validation/
 ├── _quarto.yml              book config + sidebar
 ├── index.qmd                this page
-├── config.yaml              which run to validate
+├── config.yaml              which forecast(s) to validate
 ├── styling/custom.scss      light/dark theme tweaks
 ├── PSRClogo2016path.png     PSRC logo (sidebar)
 └── summary_scripts/
     ├── util.py              plotly + pandas helpers
-    ├── validation_data_input.py   cached data loaders
+    ├── validation_data_input.py   multi-forecast loaders + tabset helpers
     └── *.ipynb              one chapter per notebook</code></pre>
 
 
@@ -944,8 +1034,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="nav-page nav-page-previous">
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./summary_scripts/population.html" class="pagination-link" aria-label="Population">
-        <span class="nav-page-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Population</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./summary_scripts/region.html" class="pagination-link" aria-label="Region">
+        <span class="nav-page-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Region</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
@@ -958,79 +1048,149 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">`control_totals`</span><span class="co">](../../README.md)</span> pipeline. Each chapter is a</span>
 <span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>self-contained Jupyter notebook in <span class="in">`summary_scripts/`</span>.</span>
 <span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="fu">## What it validates</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="fu">## What it shows</span></span>
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Output vs. input targets** — do the rebased control totals reach the</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  county / RG growth targets at the target year?</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Output vs. legacy LUVit** — how do the new control totals compare to</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  results from the legacy R pipeline (<span class="in">`examples/legacy_luvit/output`</span>)?</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Internal consistency** — control-area sums add to county and regional</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  totals, no negative values, HCT and non-HCT splits balance.</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="fu">## Pointing the dashboard at a run</span></span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>The file <span class="in">`config.yaml`</span> controls which run output is summarized:</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="in">```yaml</span></span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="fu">example_path</span><span class="kw">:</span><span class="at"> ../../examples/summer_2026</span><span class="co">   # required</span></span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="fu">legacy_path</span><span class="kw">:</span><span class="at">  ../../examples/legacy_luvit</span><span class="co">  # optional comparison</span></span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>Paths are relative to the <span class="in">`validation/`</span> folder. Edit <span class="in">`config.yaml`</span>,</span>
-<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>re-execute the notebooks, then re-render the book.</span>
-<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a><span class="fu">## Rendering the book</span></span>
-<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>Install <span class="co">[</span><span class="ot">Quarto</span><span class="co">](https://quarto.org/docs/get-started/)</span> and from the</span>
-<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a><span class="in">`control_totals/validation/`</span> folder run:</span>
-<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a><span class="in">```bash</span></span>
-<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render</span>
-<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>Output is written to <span class="in">`validation-dashboard/`</span>. Notebooks are **not** executed</span>
-<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>on render (<span class="in">`execute.enabled: false`</span>); they ship with their committed</span>
-<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a>outputs. To re-execute everything before rendering:</span>
-<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a><span class="in">```bash</span></span>
-<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a><span class="ex">jupyter</span> nbconvert <span class="at">--to</span> notebook <span class="at">--execute</span> summary_scripts/<span class="pp">*</span>.ipynb <span class="at">--inplace</span></span>
-<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render</span>
-<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>Each chapter compares one or more **forecasts** side-by-side using</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>Quarto tabsets — one tab per forecast configured in <span class="in">`config.yaml`</span>.</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>The first chapter (**Region**) shows region-wide totals. The remaining</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>six chapters break each indicator down by **target area**</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>(the <span class="in">`target_id`</span> geography defined in <span class="in">`control_target_xwalk`</span>),</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>with one section per PSRC county (King, Pierce, Snohomish, Kitsap):</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Population** — <span class="in">`rebased_control_totals_pop`</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Household Population** — <span class="in">`rebased_control_totals_hhpop`</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Households** — <span class="in">`rebased_control_totals_hh`</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Housing Units** — <span class="in">`rebased_control_totals_units`</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Household Size** — household population ÷ households</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Vacancy Rate** — 1 − (households ÷ housing units)</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>Year columns are picked per forecast (each forecast may have a different</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>base year, targets end year, and final end year). County "Total" rows</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>are recomputed from the underlying counts; ratio "Total" rows are</span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>recomputed from the summed numerator and denominator (not averaged).</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a><span class="fu">## Forecasts in this dashboard</span></span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Forecast <span class="pp">|</span> Targets vintage <span class="pp">|</span> REMI scaling <span class="pp">|</span> Notes <span class="pp">|</span></span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|</span></span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Vision 2060 Scaled** <span class="pp">|</span> 2026 targets <span class="pp">|</span> Scaled to REMI v3.3 <span class="pp">|</span> Pipeline run <span class="pp">|</span></span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Vision 2060**        <span class="pp">|</span> 2026 targets <span class="pp">|</span> Not scaled         <span class="pp">|</span> Pipeline run <span class="pp">|</span></span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Summer 2026**        <span class="pp">|</span> 2026 targets <span class="pp">|</span> Not scaled         <span class="pp">|</span> Pipeline run <span class="pp">|</span></span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Legacy LUVit (RTP26)** <span class="pp">|</span> 2021 targets <span class="pp">|</span> Not scaled       <span class="pp">|</span> Legacy Control-Totals spreadsheet (RTP26, 2025-06-11) <span class="pp">|</span></span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>Both Vision forecasts and Summer 2026 use the updated **2026** county</span>
+<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a>targets; Legacy LUVit (RTP26) carries the older **2021** targets.</span>
+<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>Only **Vision 2060 Scaled** has been rescaled to match the</span>
+<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a>**REMI v3.3** regional forecast — the others retain their native</span>
+<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a>target totals.</span>
+<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a><span class="fu">## Pointing the dashboard at runs</span></span>
 <span id="cb7-48"><a href="#cb7-48" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a>To render just one notebook (using its committed output):</span>
-<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a><span class="in">```bash</span></span>
-<span id="cb7-52"><a href="#cb7-52" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render summary_scripts/population.ipynb</span>
-<span id="cb7-53"><a href="#cb7-53" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-54"><a href="#cb7-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-55"><a href="#cb7-55" aria-hidden="true" tabindex="-1"></a><span class="fu">## Adding a new chapter</span></span>
-<span id="cb7-56"><a href="#cb7-56" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-57"><a href="#cb7-57" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Drop a new <span class="in">`.ipynb`</span> in <span class="in">`summary_scripts/`</span>.</span>
-<span id="cb7-58"><a href="#cb7-58" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>In any cell, import the shared helpers:</span>
-<span id="cb7-59"><a href="#cb7-59" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-60"><a href="#cb7-60" aria-hidden="true" tabindex="-1"></a>   <span class="in">```python</span></span>
-<span id="cb7-61"><a href="#cb7-61" aria-hidden="true" tabindex="-1"></a>   <span class="im">from</span> validation_data_input <span class="im">import</span> load_controls, load_targets, load_settings</span>
-<span id="cb7-62"><a href="#cb7-62" aria-hidden="true" tabindex="-1"></a>   <span class="im">from</span> util <span class="im">import</span> apply_plotly_theme, COUNTY_NAME</span>
-<span id="cb7-63"><a href="#cb7-63" aria-hidden="true" tabindex="-1"></a>   <span class="in">```</span></span>
+<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a>The file <span class="in">`config.yaml`</span> lists the forecasts to display. Each entry is</span>
+<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a>either a <span class="in">`pipeline`</span> forecast (a directory with <span class="in">`data/pipeline.h5`</span></span>
+<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a>produced by <span class="in">`control_totals/run.py`</span>) or a <span class="in">`spreadsheet`</span> forecast</span>
+<span id="cb7-52"><a href="#cb7-52" aria-hidden="true" tabindex="-1"></a>(a legacy LUVit-style Control Totals Excel workbook).</span>
+<span id="cb7-53"><a href="#cb7-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-54"><a href="#cb7-54" aria-hidden="true" tabindex="-1"></a><span class="in">```yaml</span></span>
+<span id="cb7-55"><a href="#cb7-55" aria-hidden="true" tabindex="-1"></a><span class="fu">forecasts</span><span class="kw">:</span></span>
+<span id="cb7-56"><a href="#cb7-56" aria-hidden="true" tabindex="-1"></a><span class="co">  # Pipeline run — years come from configs/settings.yaml</span></span>
+<span id="cb7-57"><a href="#cb7-57" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Vision 2060 Scaled</span></span>
+<span id="cb7-58"><a href="#cb7-58" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">path</span><span class="kw">:</span><span class="at"> ../../examples/vision_2060_scaled</span></span>
+<span id="cb7-59"><a href="#cb7-59" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">type</span><span class="kw">:</span><span class="at"> pipeline</span></span>
+<span id="cb7-60"><a href="#cb7-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-61"><a href="#cb7-61" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Vision 2060</span></span>
+<span id="cb7-62"><a href="#cb7-62" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">path</span><span class="kw">:</span><span class="at"> ../../examples/vision_2060</span></span>
+<span id="cb7-63"><a href="#cb7-63" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">type</span><span class="kw">:</span><span class="at"> pipeline</span></span>
 <span id="cb7-64"><a href="#cb7-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-65"><a href="#cb7-65" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>Execute the notebook (so its outputs are committed).</span>
-<span id="cb7-66"><a href="#cb7-66" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>Add the path to the <span class="in">`chapters:`</span> list in <span class="in">`_quarto.yml`</span>.</span>
-<span id="cb7-67"><a href="#cb7-67" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span><span class="in">`quarto render`</span>.</span>
+<span id="cb7-65"><a href="#cb7-65" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Summer 2026</span></span>
+<span id="cb7-66"><a href="#cb7-66" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">path</span><span class="kw">:</span><span class="at"> ../../examples/summer_2026</span></span>
+<span id="cb7-67"><a href="#cb7-67" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">type</span><span class="kw">:</span><span class="at"> pipeline</span></span>
 <span id="cb7-68"><a href="#cb7-68" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-69"><a href="#cb7-69" aria-hidden="true" tabindex="-1"></a><span class="fu">## Layout reference</span></span>
-<span id="cb7-70"><a href="#cb7-70" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-71"><a href="#cb7-71" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-72"><a href="#cb7-72" aria-hidden="true" tabindex="-1"></a><span class="in">validation/</span></span>
-<span id="cb7-73"><a href="#cb7-73" aria-hidden="true" tabindex="-1"></a><span class="in">├── _quarto.yml              book config + sidebar</span></span>
-<span id="cb7-74"><a href="#cb7-74" aria-hidden="true" tabindex="-1"></a><span class="in">├── index.qmd                this page</span></span>
-<span id="cb7-75"><a href="#cb7-75" aria-hidden="true" tabindex="-1"></a><span class="in">├── config.yaml              which run to validate</span></span>
-<span id="cb7-76"><a href="#cb7-76" aria-hidden="true" tabindex="-1"></a><span class="in">├── styling/custom.scss      light/dark theme tweaks</span></span>
-<span id="cb7-77"><a href="#cb7-77" aria-hidden="true" tabindex="-1"></a><span class="in">├── PSRClogo2016path.png     PSRC logo (sidebar)</span></span>
-<span id="cb7-78"><a href="#cb7-78" aria-hidden="true" tabindex="-1"></a><span class="in">└── summary_scripts/</span></span>
-<span id="cb7-79"><a href="#cb7-79" aria-hidden="true" tabindex="-1"></a><span class="in">    ├── util.py              plotly + pandas helpers</span></span>
-<span id="cb7-80"><a href="#cb7-80" aria-hidden="true" tabindex="-1"></a><span class="in">    ├── validation_data_input.py   cached data loaders</span></span>
-<span id="cb7-81"><a href="#cb7-81" aria-hidden="true" tabindex="-1"></a><span class="in">    └── *.ipynb              one chapter per notebook</span></span>
-<span id="cb7-82"><a href="#cb7-82" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+<span id="cb7-69"><a href="#cb7-69" aria-hidden="true" tabindex="-1"></a><span class="co">  # Legacy Control Totals workbook — years are declared inline,</span></span>
+<span id="cb7-70"><a href="#cb7-70" aria-hidden="true" tabindex="-1"></a><span class="co">  # and an external xwalk maps target_id → county.</span></span>
+<span id="cb7-71"><a href="#cb7-71" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Legacy LUVit (RTP26)</span></span>
+<span id="cb7-72"><a href="#cb7-72" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">path</span><span class="kw">:</span><span class="at"> ../../examples/legacy_luvit_spreadsheet</span></span>
+<span id="cb7-73"><a href="#cb7-73" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">type</span><span class="kw">:</span><span class="at"> spreadsheet</span></span>
+<span id="cb7-74"><a href="#cb7-74" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">spreadsheet_file</span><span class="kw">:</span><span class="at"> output/Control-Totals-RTP26-2025-06-11.xlsx</span></span>
+<span id="cb7-75"><a href="#cb7-75" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">xwalk_path</span><span class="kw">:</span><span class="at"> ../../examples/vision_2060_scaled/data/control_target_xwalk.csv</span></span>
+<span id="cb7-76"><a href="#cb7-76" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">base_year</span><span class="kw">:</span><span class="at"> </span><span class="dv">2020</span></span>
+<span id="cb7-77"><a href="#cb7-77" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">targets_end_year</span><span class="kw">:</span><span class="at"> </span><span class="dv">2044</span></span>
+<span id="cb7-78"><a href="#cb7-78" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">end_year</span><span class="kw">:</span><span class="at"> </span><span class="dv">2050</span></span>
+<span id="cb7-79"><a href="#cb7-79" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-80"><a href="#cb7-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-81"><a href="#cb7-81" aria-hidden="true" tabindex="-1"></a>Paths are relative to the <span class="in">`validation/`</span> folder. Edit <span class="in">`config.yaml`</span>,</span>
+<span id="cb7-82"><a href="#cb7-82" aria-hidden="true" tabindex="-1"></a>re-execute the notebooks, then re-render the book.</span>
+<span id="cb7-83"><a href="#cb7-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-84"><a href="#cb7-84" aria-hidden="true" tabindex="-1"></a>Forecasts that do not contain data for a given indicator (for example,</span>
+<span id="cb7-85"><a href="#cb7-85" aria-hidden="true" tabindex="-1"></a>the legacy workbook does not include housing units, and a pipeline run</span>
+<span id="cb7-86"><a href="#cb7-86" aria-hidden="true" tabindex="-1"></a>that has not yet produced rebased control totals) render a small</span>
+<span id="cb7-87"><a href="#cb7-87" aria-hidden="true" tabindex="-1"></a>"Not available for this forecast" placeholder in their tab instead of</span>
+<span id="cb7-88"><a href="#cb7-88" aria-hidden="true" tabindex="-1"></a>breaking the page.</span>
+<span id="cb7-89"><a href="#cb7-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-90"><a href="#cb7-90" aria-hidden="true" tabindex="-1"></a><span class="fu">## Rendering the book</span></span>
+<span id="cb7-91"><a href="#cb7-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-92"><a href="#cb7-92" aria-hidden="true" tabindex="-1"></a>Install <span class="co">[</span><span class="ot">Quarto</span><span class="co">](https://quarto.org/docs/get-started/)</span> and from the</span>
+<span id="cb7-93"><a href="#cb7-93" aria-hidden="true" tabindex="-1"></a><span class="in">`control_totals/validation/`</span> folder run:</span>
+<span id="cb7-94"><a href="#cb7-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-95"><a href="#cb7-95" aria-hidden="true" tabindex="-1"></a><span class="in">```bash</span></span>
+<span id="cb7-96"><a href="#cb7-96" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render</span>
+<span id="cb7-97"><a href="#cb7-97" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-98"><a href="#cb7-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-99"><a href="#cb7-99" aria-hidden="true" tabindex="-1"></a>Output is written to <span class="in">`validation-dashboard/`</span>. Notebooks are **not**</span>
+<span id="cb7-100"><a href="#cb7-100" aria-hidden="true" tabindex="-1"></a>executed on render (<span class="in">`execute.enabled: false`</span>); they ship with their</span>
+<span id="cb7-101"><a href="#cb7-101" aria-hidden="true" tabindex="-1"></a>committed outputs. To re-execute everything before rendering:</span>
+<span id="cb7-102"><a href="#cb7-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-103"><a href="#cb7-103" aria-hidden="true" tabindex="-1"></a><span class="in">```bash</span></span>
+<span id="cb7-104"><a href="#cb7-104" aria-hidden="true" tabindex="-1"></a><span class="ex">jupyter</span> nbconvert <span class="at">--to</span> notebook <span class="at">--execute</span> summary_scripts/<span class="pp">*</span>.ipynb <span class="at">--inplace</span></span>
+<span id="cb7-105"><a href="#cb7-105" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render</span>
+<span id="cb7-106"><a href="#cb7-106" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-107"><a href="#cb7-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-108"><a href="#cb7-108" aria-hidden="true" tabindex="-1"></a>To render just one notebook (using its committed output):</span>
+<span id="cb7-109"><a href="#cb7-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-110"><a href="#cb7-110" aria-hidden="true" tabindex="-1"></a><span class="in">```bash</span></span>
+<span id="cb7-111"><a href="#cb7-111" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render summary_scripts/population.ipynb</span>
+<span id="cb7-112"><a href="#cb7-112" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-113"><a href="#cb7-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-114"><a href="#cb7-114" aria-hidden="true" tabindex="-1"></a><span class="fu">## Adding a new chapter</span></span>
+<span id="cb7-115"><a href="#cb7-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-116"><a href="#cb7-116" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Drop a new <span class="in">`.ipynb`</span> in <span class="in">`summary_scripts/`</span>.</span>
+<span id="cb7-117"><a href="#cb7-117" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>In any cell, import the shared helpers:</span>
+<span id="cb7-118"><a href="#cb7-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-119"><a href="#cb7-119" aria-hidden="true" tabindex="-1"></a>   <span class="in">```python</span></span>
+<span id="cb7-120"><a href="#cb7-120" aria-hidden="true" tabindex="-1"></a>   <span class="im">from</span> validation_data_input <span class="im">import</span> (</span>
+<span id="cb7-121"><a href="#cb7-121" aria-hidden="true" tabindex="-1"></a>       show_indicator_county, show_ratio_county,</span>
+<span id="cb7-122"><a href="#cb7-122" aria-hidden="true" tabindex="-1"></a>       show_region_indicator, show_region_ratio,</span>
+<span id="cb7-123"><a href="#cb7-123" aria-hidden="true" tabindex="-1"></a>       target_area_table, ratio_table,</span>
+<span id="cb7-124"><a href="#cb7-124" aria-hidden="true" tabindex="-1"></a>       format_counts, format_ratio,</span>
+<span id="cb7-125"><a href="#cb7-125" aria-hidden="true" tabindex="-1"></a>       forecast_ids, forecast_name,</span>
+<span id="cb7-126"><a href="#cb7-126" aria-hidden="true" tabindex="-1"></a>       COUNTIES,</span>
+<span id="cb7-127"><a href="#cb7-127" aria-hidden="true" tabindex="-1"></a>   )</span>
+<span id="cb7-128"><a href="#cb7-128" aria-hidden="true" tabindex="-1"></a>   <span class="in">```</span></span>
+<span id="cb7-129"><a href="#cb7-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-130"><a href="#cb7-130" aria-hidden="true" tabindex="-1"></a>   The <span class="in">`show_*`</span> helpers emit a Quarto <span class="in">`panel-tabset`</span> with one tab per</span>
+<span id="cb7-131"><a href="#cb7-131" aria-hidden="true" tabindex="-1"></a>   configured forecast. For ad-hoc analyses, use <span class="in">`target_area_table`</span>,</span>
+<span id="cb7-132"><a href="#cb7-132" aria-hidden="true" tabindex="-1"></a>   <span class="in">`ratio_table`</span>, and the formatters directly with a specific</span>
+<span id="cb7-133"><a href="#cb7-133" aria-hidden="true" tabindex="-1"></a>   forecast id (see <span class="in">`forecast_ids()`</span>).</span>
+<span id="cb7-134"><a href="#cb7-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-135"><a href="#cb7-135" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>Execute the notebook (so its outputs are committed).</span>
+<span id="cb7-136"><a href="#cb7-136" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>Add the path to the <span class="in">`chapters:`</span> list in <span class="in">`_quarto.yml`</span>.</span>
+<span id="cb7-137"><a href="#cb7-137" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span><span class="in">`quarto render`</span>.</span>
+<span id="cb7-138"><a href="#cb7-138" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-139"><a href="#cb7-139" aria-hidden="true" tabindex="-1"></a><span class="fu">## Layout reference</span></span>
+<span id="cb7-140"><a href="#cb7-140" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-141"><a href="#cb7-141" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-142"><a href="#cb7-142" aria-hidden="true" tabindex="-1"></a><span class="in">validation/</span></span>
+<span id="cb7-143"><a href="#cb7-143" aria-hidden="true" tabindex="-1"></a><span class="in">├── _quarto.yml              book config + sidebar</span></span>
+<span id="cb7-144"><a href="#cb7-144" aria-hidden="true" tabindex="-1"></a><span class="in">├── index.qmd                this page</span></span>
+<span id="cb7-145"><a href="#cb7-145" aria-hidden="true" tabindex="-1"></a><span class="in">├── config.yaml              which forecast(s) to validate</span></span>
+<span id="cb7-146"><a href="#cb7-146" aria-hidden="true" tabindex="-1"></a><span class="in">├── styling/custom.scss      light/dark theme tweaks</span></span>
+<span id="cb7-147"><a href="#cb7-147" aria-hidden="true" tabindex="-1"></a><span class="in">├── PSRClogo2016path.png     PSRC logo (sidebar)</span></span>
+<span id="cb7-148"><a href="#cb7-148" aria-hidden="true" tabindex="-1"></a><span class="in">└── summary_scripts/</span></span>
+<span id="cb7-149"><a href="#cb7-149" aria-hidden="true" tabindex="-1"></a><span class="in">    ├── util.py              plotly + pandas helpers</span></span>
+<span id="cb7-150"><a href="#cb7-150" aria-hidden="true" tabindex="-1"></a><span class="in">    ├── validation_data_input.py   multi-forecast loaders + tabset helpers</span></span>
+<span id="cb7-151"><a href="#cb7-151" aria-hidden="true" tabindex="-1"></a><span class="in">    └── *.ipynb              one chapter per notebook</span></span>
+<span id="cb7-152"><a href="#cb7-152" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 <footer class="footer">
