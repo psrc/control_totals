@@ -134,36 +134,48 @@ def build_rebased_targets(city_data, ref_base_year, base_year, target_year):
 		}
 	)
 
-	city_gro_pop = city_data[
-		[
-			'county_id',
-			'RGID',
-			'control_id',
-			f'Pop{ref_year_short}',
-			f'TotPop{base_year_short}',
-			f'HHpop{ref_year_short}',
-			f'HHpop{base_year_short}',
-			f'HH{ref_year_short}',
-			f'HH{base_year_short}',
-			'TotPopTrg',
-			f'TotPop{target_year_short}',
-			f'GQpct{target_year_short}',
-			f'PPH{target_year_short}',
-		]
-	].rename(
-		columns={
-			f'Pop{ref_year_short}': 'PopBY',
-			f'TotPop{base_year_short}': 'PopBase',
-			f'HHpop{ref_year_short}': 'HHPopBY',
-			f'HHpop{base_year_short}': 'HHPopBase',
-			f'HH{ref_year_short}': 'HHBY',
-			f'HH{base_year_short}': 'HHBase',
-			'TotPopTrg': 'PopGro',
-			f'TotPop{target_year_short}': 'PopTarget',
-			f'GQpct{target_year_short}': 'GQpctTarget',
-			f'PPH{target_year_short}': 'PPHTarget',
-		}
-	)
+	pop_source_columns = [
+		'county_id',
+		'RGID',
+		'control_id',
+		f'Pop{ref_year_short}',
+		f'TotPop{base_year_short}',
+		f'HHpop{ref_year_short}',
+		f'HHpop{base_year_short}',
+		f'HH{ref_year_short}',
+		f'HH{base_year_short}',
+		'TotPopTrg',
+		f'TotPop{target_year_short}',
+		f'GQpct{target_year_short}',
+		f'PPH{target_year_short}',
+	]
+	# Deduplicate while preserving order; needed when ref_base_year == base_year.
+	pop_source_columns = list(dict.fromkeys(pop_source_columns))
+	city_gro_pop = city_data[pop_source_columns].copy()
+
+	# When the REF base year and rebase base year are the same, the same source
+	# column maps to two output names (e.g. 'HHpop23' -> both 'HHPopBY' and 'HHPopBase').
+	# Apply renames sequentially, duplicating columns as needed.
+	rename_pairs = [
+		(f'Pop{ref_year_short}', 'PopBY'),
+		(f'TotPop{base_year_short}', 'PopBase'),
+		(f'HHpop{ref_year_short}', 'HHPopBY'),
+		(f'HHpop{base_year_short}', 'HHPopBase'),
+		(f'HH{ref_year_short}', 'HHBY'),
+		(f'HH{base_year_short}', 'HHBase'),
+		('TotPopTrg', 'PopGro'),
+		(f'TotPop{target_year_short}', 'PopTarget'),
+		(f'GQpct{target_year_short}', 'GQpctTarget'),
+		(f'PPH{target_year_short}', 'PPHTarget'),
+	]
+	already_renamed = {}
+	for source, target in rename_pairs:
+		if source in already_renamed:
+			# Source has already been renamed; copy from its new name.
+			city_gro_pop[target] = city_gro_pop[already_renamed[source]]
+		else:
+			city_gro_pop = city_gro_pop.rename(columns={source: target})
+			already_renamed[source] = target
 
 	city_gro_pop['HHPopTarget'] = city_gro_pop['PopTarget'] - city_gro_pop['PopTarget'] * city_gro_pop['GQpctTarget'] / 100
 	city_gro_pop['HHTarget'] = city_gro_pop['HHPopTarget'] / city_gro_pop['PPHTarget']
@@ -205,34 +217,40 @@ def build_rebased_targets(city_data, ref_base_year, base_year, target_year):
 	target_year_short = str(target_year)[-2:]
 	growth_suffix = f"{str(base_year)[-2:]}{target_year_short}"
 
-	city_rgs_pop = city_rgs_pop.rename(
-		columns={
-			'PopBY': f'Pop{ref_base_year}',
-			'PopBase': f'Pop{base_year}',
-			'PopGro': f'PopGro{growth_suffix}',
-			'PopTarget': f'Pop{target_year}',
-			'HHPopBY': f'HHPop{ref_base_year}',
-			'HHPopBase': f'HHPop{base_year}',
-			'HHPopGro': f'HHPopGro{growth_suffix}',
-			'HHPopTarget': f'HHPop{target_year}',
-		}
-	)
-	city_rgs_emp = city_rgs_emp.rename(
-		columns={
-			'EmpBY': f'Emp{ref_base_year}',
-			'EmpBase': f'Emp{base_year}',
-			'EmpGro': f'EmpGro{growth_suffix}',
-			'EmpTarget': f'Emp{target_year}',
-		}
-	)
-	city_rgs_hh = city_rgs_hh.rename(
-		columns={
-			'HHBY': f'HH{ref_base_year}',
-			'HHBase': f'HH{base_year}',
-			'HHGro': f'HHGro{growth_suffix}',
-			'HHTarget': f'HH{target_year}',
-		}
-	)
+	# When ref_base_year == base_year, the BY and Base columns are identical;
+	# drop the BY duplicates so the rename below doesn't produce duplicate column labels.
+	if ref_base_year == base_year:
+		city_rgs_pop = city_rgs_pop.drop(columns=['PopBY', 'HHPopBY'])
+		city_rgs_emp = city_rgs_emp.drop(columns=['EmpBY'])
+		city_rgs_hh = city_rgs_hh.drop(columns=['HHBY'])
+
+	pop_rename = {
+		'PopBase': f'Pop{base_year}',
+		'PopGro': f'PopGro{growth_suffix}',
+		'PopTarget': f'Pop{target_year}',
+		'HHPopBase': f'HHPop{base_year}',
+		'HHPopGro': f'HHPopGro{growth_suffix}',
+		'HHPopTarget': f'HHPop{target_year}',
+	}
+	emp_rename = {
+		'EmpBase': f'Emp{base_year}',
+		'EmpGro': f'EmpGro{growth_suffix}',
+		'EmpTarget': f'Emp{target_year}',
+	}
+	hh_rename = {
+		'HHBase': f'HH{base_year}',
+		'HHGro': f'HHGro{growth_suffix}',
+		'HHTarget': f'HH{target_year}',
+	}
+	if ref_base_year != base_year:
+		pop_rename['PopBY'] = f'Pop{ref_base_year}'
+		pop_rename['HHPopBY'] = f'HHPop{ref_base_year}'
+		emp_rename['EmpBY'] = f'Emp{ref_base_year}'
+		hh_rename['HHBY'] = f'HH{ref_base_year}'
+
+	city_rgs_pop = city_rgs_pop.rename(columns=pop_rename)
+	city_rgs_emp = city_rgs_emp.rename(columns=emp_rename)
+	city_rgs_hh = city_rgs_hh.rename(columns=hh_rename)
 	rgs_target = rgs_target.rename(
 		columns={
 			'PopDelta': f'Pop{growth_suffix}',
@@ -454,7 +472,7 @@ def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, ta
 		dict: A dictionary of DataFrames keyed by indicator name plus
 			``'unrolled'`` and ``'unrolled_regional'`` entries.
 	"""
-	anchors = [ref_base_year, base_year, target_year]
+	anchors = sorted({ref_base_year, base_year, target_year})
 	if stepped_years is None:
 		stepped_years = [ref_base_year, *range(base_year, target_year + 1, 5)]
 		if target_year not in stepped_years:

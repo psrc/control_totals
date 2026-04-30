@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from urllib.parse import quote_plus
 
@@ -12,27 +13,46 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 R_SCRIPTS_DIR = PROJECT_ROOT / 'r_scripts'
 
 
-def _read_mysql_creds(creds_path):
-	"""Read MySQL credentials from a plain-text credentials file.
+def _read_mysql_creds(creds_path=None, user_env='URBANSIM_MYSQL_USER', password_env='URBANSIM_MYSQL_PASSWORD', host_env='URBANSIM_MYSQL_HOST'):
+	"""Resolve MySQL credentials from environment variables or a credentials file.
 
-	Expects three non-empty lines: username, password, and host.
+	Prefers environment variables (whose names default to ``URBANSIM_MYSQL_USER``,
+	``URBANSIM_MYSQL_PASSWORD``, and ``URBANSIM_MYSQL_HOST`` but can be overridden
+	via settings). Falls back to a plain-text credentials file (three non-empty
+	lines: username, password, host) when one or more env vars are missing and
+	``creds_path`` exists.
 
 	Args:
-		creds_path (pathlib.Path): Path to the credentials file.
+		creds_path (pathlib.Path, optional): Path to a fallback credentials file.
+		user_env (str, optional): Env var name for the MySQL username.
+		password_env (str, optional): Env var name for the MySQL password.
+		host_env (str, optional): Env var name for the MySQL host.
 
 	Returns:
 		tuple[str, str, str]: ``(username, password, host)``.
 
 	Raises:
-		ValueError: If fewer than three lines are found.
+		ValueError: If credentials cannot be resolved from env vars or file.
 	"""
-	lines = [line.strip() for line in creds_path.read_text().splitlines() if line.strip()]
-	if len(lines) < 3:
-		raise ValueError('Expected username, password, and host in creds.txt')
-	return lines[0], lines[1], lines[2]
+	user = os.environ.get(user_env)
+	password = os.environ.get(password_env)
+	host = os.environ.get(host_env)
+	if user and password and host:
+		return user, password, host
+
+	if creds_path is not None and Path(creds_path).exists():
+		lines = [line.strip() for line in Path(creds_path).read_text().splitlines() if line.strip()]
+		if len(lines) < 3:
+			raise ValueError('Expected username, password, and host in creds file')
+		return lines[0], lines[1], lines[2]
+
+	raise ValueError(
+		f'MySQL credentials not found. Set {user_env}, {password_env}, '
+		f'and {host_env} environment variables, or provide a creds file.'
+	)
 
 
-def load_base_data_from_mysql(base_db, creds_path):
+def load_base_data_from_mysql(base_db, creds_path, user_env='URBANSIM_MYSQL_USER', password_env='URBANSIM_MYSQL_PASSWORD', host_env='URBANSIM_MYSQL_HOST'):
 	"""Load household, person, and job base data from a MySQL database.
 
 	Queries the base-year MySQL database for household/person and job
@@ -42,12 +62,15 @@ def load_base_data_from_mysql(base_db, creds_path):
 		base_db (str): Name of the MySQL database (e.g.
 			``'2018_parcel_baseyear'``).
 		creds_path (pathlib.Path): Path to the credentials file.
+		user_env (str, optional): Env var name for the MySQL username.
+		password_env (str, optional): Env var name for the MySQL password.
+		host_env (str, optional): Env var name for the MySQL host.
 
 	Returns:
 		pandas.DataFrame: Base data with columns ``parcel_id``,
 			``households``, ``persons``, and ``jobs``.
 	"""
-	user, password, host = _read_mysql_creds(creds_path)
+	user, password, host = _read_mysql_creds(creds_path, user_env=user_env, password_env=password_env, host_env=host_env)
 	engine = create_engine(
 		f"mysql+pymysql://{quote_plus(user)}:{quote_plus(password)}@{host}/{base_db}"
 	)
@@ -135,34 +158,74 @@ def _resolve_path(base_path, candidate):
 	return candidate_path if candidate_path.is_absolute() else base_path / candidate_path
 
 
+def _load_base_data_from_file(base_data_path):
+	"""Load base-data from a local file (.pkl, .parquet, or .csv)."""
+	if base_data_path.suffix.lower() == '.pkl':
+		return pd.read_pickle(base_data_path)
+	if base_data_path.suffix.lower() == '.parquet':
+		return pd.read_parquet(base_data_path)
+	if base_data_path.suffix.lower() == '.csv':
+		return pd.read_csv(base_data_path)
+	raise ValueError(f'Unsupported base data file type: {base_data_path.suffix}')
+
+
 def run_step(context):
 	"""Execute the base-data loading pipeline step for the HCT split.
 
-	Connects to a MySQL parcel base-year database, loads household and job
-	counts by subreg/control geography, and saves the result to the
-	pipeline HDF5 store. Optionally writes a local file copy.
+	Honors the ``split_hct`` settings block. When ``use_mysql`` is True,
+	loads household/job counts from a MySQL parcel base-year database,
+	aggregates to subreg/control geography, and saves to the pipeline
+	HDF5 store. When ``use_mysql`` is False, attempts to load a cached
+	copy from the pipeline HDF5 store, falling back to ``base_data_file``
+	if present, and otherwise leaves the pipeline as-is so a downstream
+	step can populate it.
 
 	Args:
 		context (dict): The pypyr context dictionary, expected to contain
-			a ``'configs_dir'`` key and optional keys such as
-			``split_hct_base_year``, ``split_hct_parcel_base_year``,
-			``split_hct_creds_file``, ``split_hct_base_data_file``, and
-			``split_hct_save_base_data_file``.
+			a ``'configs_dir'`` key.
 
 	Returns:
 		dict: The unchanged pypyr context dictionary.
 	"""
 	pipeline = Pipeline(settings_path=context['configs_dir'])
 	base_year = pipeline.settings['base_year']
-	parcel_base_year = int(context.get('split_hct_parcel_base_year', 2018))
-	creds_path = _resolve_path(R_SCRIPTS_DIR, context.get('split_hct_creds_file', 'creds.txt'))
-	legacy_base_data_path = _resolve_path(PROJECT_ROOT, context.get('split_hct_base_data_file', R_SCRIPTS_DIR / 'inputs' / f'base_data_shares_{base_year}.rda'))
+	cfg = pipeline.settings.get('split_hct', {})
 
-	base_data = load_base_data_from_mysql(f'{parcel_base_year}_parcel_baseyear', creds_path)
-	base_data = aggregate_base_data(pipeline, base_data)
-	pipeline.save_table(get_base_data_table_name(base_year), base_data)
+	data_dir = Path(pipeline.get_data_dir())
+	parcel_base_year = int(cfg.get('parcel_base_year', 2018))
+	creds_path = data_dir / cfg.get('creds_file', 'creds.txt')
+	base_data_path = data_dir / cfg.get('base_data_file', f'inputs/base_data_shares_{base_year}.rda')
+	use_mysql = bool(cfg.get('use_mysql', False))
+	save_base_data_file = bool(cfg.get('save_base_data_file', False))
+	table_name = get_base_data_table_name(base_year)
 
-	if bool(context.get('split_hct_save_base_data_file', False)):
-		maybe_save_base_data(base_data, legacy_base_data_path)
+	if use_mysql:
+		base_data = load_base_data_from_mysql(
+			f'{parcel_base_year}_parcel_baseyear',
+			creds_path,
+			user_env=cfg.get('urbansim_mysql_user', 'URBANSIM_MYSQL_USER'),
+			password_env=cfg.get('urbansim_mysql_pass', 'URBANSIM_MYSQL_PASSWORD'),
+			host_env=cfg.get('urbansim_mysql_host', 'URBANSIM_MYSQL_HOST'),
+		)
+		base_data = aggregate_base_data(pipeline, base_data)
+		pipeline.save_table(table_name, base_data)
+		if save_base_data_file:
+			maybe_save_base_data(base_data, base_data_path)
+		return context
 
+	if pipeline.check_table_exists(table_name):
+		print(f'Base data table {table_name} already present in pipeline.h5; skipping load.')
+		return context
+
+	if base_data_path.exists() and base_data_path.suffix.lower() in {'.pkl', '.parquet', '.csv'}:
+		base_data = _load_base_data_from_file(base_data_path)
+		pipeline.save_table(table_name, base_data)
+		return context
+
+	print(
+		f'Skipping load_split_hct_base_data: use_mysql is false, no cached '
+		f'table {table_name} in pipeline.h5, and no usable base data file at '
+		f'{base_data_path}. Set split_hct.use_mysql=true or provide a '
+		f'.pkl/.parquet/.csv base_data_file.'
+	)
 	return context

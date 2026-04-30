@@ -7,7 +7,7 @@ import pandas as pd
 
 from util import Pipeline
 from steps.create_control_totals_rebased_targets import interpolate_controls_with_anchors, unroll_controls
-from steps.load_split_hct_base_data import get_base_data_table_name, load_base_data_from_mysql, maybe_save_base_data
+from steps.load_split_hct_base_data import aggregate_base_data, get_base_data_table_name, load_base_data_from_mysql, maybe_save_base_data
 
 
 def _series_divide(numerator, denominator, default=0.0):
@@ -143,7 +143,7 @@ def load_base_data_from_file(base_data_path):
 
 
 
-def load_base_data(pipeline, base_year, use_mysql=False, parcel_base_year=2018, creds_path=None, legacy_base_data_path=None, save_legacy_file=False):
+def load_base_data(pipeline, base_year, use_mysql=False, parcel_base_year=2018, creds_path=None, legacy_base_data_path=None, save_legacy_file=False, user_env='URBANSIM_MYSQL_USER', password_env='URBANSIM_MYSQL_PASSWORD', host_env='URBANSIM_MYSQL_HOST'):
 	"""Load or fetch base data for the HCT split step.
 
 	Attempts to retrieve cached base data from the pipeline HDF5 store.
@@ -171,26 +171,35 @@ def load_base_data(pipeline, base_year, use_mysql=False, parcel_base_year=2018, 
 		KeyError: If no cached or fallback data can be found.
 	"""
 	table_name = get_base_data_table_name(base_year)
+	try:
+		cached = pipeline.get_table(table_name)
+		if 'nosplit_geo_id' in cached.columns:
+			return cached
+	except (KeyError, FileNotFoundError, OSError):
+		pass
+
 	if use_mysql:
-		if creds_path is None:
-			raise ValueError('creds_path is required when split_hct_use_mysql is True.')
-		base_data = load_base_data_from_mysql(f'{parcel_base_year}_parcel_baseyear', creds_path)
+		base_data = load_base_data_from_mysql(
+			f'{parcel_base_year}_parcel_baseyear',
+			creds_path,
+			user_env=user_env,
+			password_env=password_env,
+			host_env=host_env,
+		)
+		base_data = aggregate_base_data(pipeline, base_data)
 		pipeline.save_table(table_name, base_data)
 		if save_legacy_file and legacy_base_data_path is not None:
 			maybe_save_base_data(base_data, legacy_base_data_path)
 		return base_data
 
-	try:
-		return pipeline.get_table(table_name)
-	except (KeyError, FileNotFoundError, OSError):
-		if legacy_base_data_path is not None and Path(legacy_base_data_path).exists():
-			base_data = load_base_data_from_file(Path(legacy_base_data_path))
-			pipeline.save_table(table_name, base_data)
-			return base_data
-		raise KeyError(
-			f'Base data table {table_name} not found in pipeline.h5. '
-			'Run steps.load_split_hct_base_data or set split_hct_use_mysql=True.'
-		)
+	if legacy_base_data_path is not None and Path(legacy_base_data_path).exists():
+		base_data = load_base_data_from_file(Path(legacy_base_data_path))
+		pipeline.save_table(table_name, base_data)
+		return base_data
+	raise KeyError(
+		f'Base data table {table_name} not found in pipeline.h5. '
+		'Run steps.load_split_hct_base_data or set split_hct_use_mysql=True.'
+	)
 
 
 def prepare_base_data(base_data, ct_sheets):
@@ -1019,6 +1028,9 @@ def run_step(context):
 		creds_path=creds_path,
 		legacy_base_data_path=base_data_path,
 		save_legacy_file=bool(cfg.get('save_base_data_file', False)),
+		user_env=cfg.get('urbansim_mysql_user', 'URBANSIM_MYSQL_USER'),
+		password_env=cfg.get('urbansim_mysql_pass', 'URBANSIM_MYSQL_PASSWORD'),
+		host_env=cfg.get('urbansim_mysql_host', 'URBANSIM_MYSQL_HOST'),
 	)
 	
 	# parcels_hct = pipeline.load_geodataframe('parcels_hct')

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from urllib.parse import quote_plus
 
@@ -12,27 +13,46 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 R_SCRIPTS_DIR = PROJECT_ROOT / 'r_scripts'
 
 
-def _read_mysql_creds(creds_path):
-	"""Read MySQL credentials from a plain-text credentials file.
+def _read_mysql_creds(creds_path=None, user_env='URBANSIM_MYSQL_USER', password_env='URBANSIM_MYSQL_PASSWORD', host_env='URBANSIM_MYSQL_HOST'):
+	"""Resolve MySQL credentials from environment variables or a credentials file.
 
-	Expects three non-empty lines: username, password, and host.
+	Prefers environment variables (whose names default to ``URBANSIM_MYSQL_USER``,
+	``URBANSIM_MYSQL_PASSWORD``, and ``URBANSIM_MYSQL_HOST`` but can be overridden
+	via settings). Falls back to a plain-text credentials file (three non-empty
+	lines: username, password, host) when one or more env vars are missing and
+	``creds_path`` exists.
 
 	Args:
-		creds_path (pathlib.Path): Path to the credentials file.
+		creds_path (pathlib.Path, optional): Path to a fallback credentials file.
+		user_env (str, optional): Env var name for the MySQL username.
+		password_env (str, optional): Env var name for the MySQL password.
+		host_env (str, optional): Env var name for the MySQL host.
 
 	Returns:
 		tuple[str, str, str]: ``(username, password, host)``.
 
 	Raises:
-		ValueError: If fewer than three lines are found.
+		ValueError: If credentials cannot be resolved from env vars or file.
 	"""
-	lines = [line.strip() for line in creds_path.read_text().splitlines() if line.strip()]
-	if len(lines) < 3:
-		raise ValueError('Expected username, password, and host in creds.txt')
-	return lines[0], lines[1], lines[2]
+	user = os.environ.get(user_env)
+	password = os.environ.get(password_env)
+	host = os.environ.get(host_env)
+	if user and password and host:
+		return user, password, host
+
+	if creds_path is not None and Path(creds_path).exists():
+		lines = [line.strip() for line in Path(creds_path).read_text().splitlines() if line.strip()]
+		if len(lines) < 3:
+			raise ValueError('Expected username, password, and host in creds file')
+		return lines[0], lines[1], lines[2]
+
+	raise ValueError(
+		f'MySQL credentials not found. Set {user_env}, {password_env}, '
+		f'and {host_env} environment variables, or provide a creds file.'
+	)
 
 
-def load_base_data_from_mysql(base_db, creds_path):
+def load_base_data_from_mysql(base_db, creds_path, user_env='URBANSIM_MYSQL_USER', password_env='URBANSIM_MYSQL_PASSWORD', host_env='URBANSIM_MYSQL_HOST'):
 	"""Load household, person, and job base data from a MySQL database.
 
 	Queries the base-year MySQL database for household/person and job
@@ -42,12 +62,15 @@ def load_base_data_from_mysql(base_db, creds_path):
 		base_db (str): Name of the MySQL database (e.g.
 			``'2018_parcel_baseyear'``).
 		creds_path (pathlib.Path): Path to the credentials file.
+		user_env (str, optional): Env var name for the MySQL username.
+		password_env (str, optional): Env var name for the MySQL password.
+		host_env (str, optional): Env var name for the MySQL host.
 
 	Returns:
 		pandas.DataFrame: Base data with columns ``parcel_id``,
 			``households``, ``persons``, and ``jobs``.
 	"""
-	user, password, host = _read_mysql_creds(creds_path)
+	user, password, host = _read_mysql_creds(creds_path, user_env=user_env, password_env=password_env, host_env=host_env)
 	engine = create_engine(
 		f"mysql+pymysql://{quote_plus(user)}:{quote_plus(password)}@{host}/{base_db}"
 	)
