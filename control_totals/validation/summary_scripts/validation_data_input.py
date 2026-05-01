@@ -361,9 +361,35 @@ def _placeholder(years: list[str]) -> pd.DataFrame:
 # Table builders
 # ---------------------------------------------------------------------------
 
+_AVG_ANNUAL_CHANGE_COL = "Avg. annual change"
+
+
 def _restrict_years(df: pd.DataFrame, years: list[str]) -> list[str]:
     """Return year labels from *years* that are present in *df*."""
     return [y for y in years if y in df.columns]
+
+
+def _append_avg_annual_change(
+    df: pd.DataFrame, years: list[str], col: str = _AVG_ANNUAL_CHANGE_COL
+) -> pd.DataFrame:
+    """Append an average-annual-change column based on the first and last years.
+
+    The value is ``(df[end_year] - df[base_year]) / (end_year - base_year)``.
+    Returns *df* unchanged if fewer than two years are available or if the
+    span is zero.
+    """
+    if len(years) < 2:
+        return df
+    base, end = years[0], years[-1]
+    try:
+        span = int(end) - int(base)
+    except (TypeError, ValueError):
+        return df
+    if span <= 0:
+        return df
+    df = df.copy()
+    df[col] = (df[end] - df[base]) / span
+    return df
 
 
 def _county_slice(df: pd.DataFrame, county_id: int, years: list[str]) -> pd.DataFrame:
@@ -388,7 +414,7 @@ def target_area_table(
         return _placeholder(fc.years)
     sub = _county_slice(df, county_id, years)
     sub.loc[total_label] = sub.sum(axis=0)
-    return sub
+    return _append_avg_annual_change(sub, years)
 
 
 def ratio_table(
@@ -420,7 +446,7 @@ def ratio_table(
     else:
         raise ValueError(f"Unknown formula {formula!r}; use 'ratio' or 'vacancy'.")
     ratio.loc[total_label] = total
-    return ratio
+    return _append_avg_annual_change(ratio, years)
 
 
 def _county_year_matrix(df: pd.DataFrame, years: list[str]) -> pd.DataFrame:
@@ -447,7 +473,7 @@ def region_table(
         return _placeholder(fc.years)
     counties = _county_year_matrix(df, years)
     counties.loc[total_label] = counties.sum(axis=0)
-    return counties
+    return _append_avg_annual_change(counties, years)
 
 
 def region_ratio_table(
@@ -477,7 +503,7 @@ def region_ratio_table(
     else:
         raise ValueError(f"Unknown formula {formula!r}; use 'ratio' or 'vacancy'.")
     ratio.loc[total_label] = total
-    return ratio
+    return _append_avg_annual_change(ratio, years)
 
 
 # ---------------------------------------------------------------------------
@@ -491,19 +517,30 @@ def _is_placeholder(df: pd.DataFrame) -> bool:
     )
 
 
+def _fmt_fixed(decimals: int):
+    """Return a formatter that avoids '-0.00' for values rounding to zero."""
+    def _f(v):
+        if pd.isna(v):
+            return "-"
+        rounded = round(float(v), decimals)
+        if rounded == 0:
+            rounded = 0.0
+        return f"{rounded:,.{decimals}f}"
+    return _f
+
+
 def format_counts(df: pd.DataFrame):
     """Render counts with thousands separators and no decimals."""
     if _is_placeholder(df):
         return df.style
-    return df.style.format("{:,.0f}", na_rep="-")
+    return df.style.format(_fmt_fixed(0), na_rep="-")
 
 
 def format_ratio(df: pd.DataFrame, decimals: int = 2):
     """Render ratios with fixed decimal places."""
     if _is_placeholder(df):
         return df.style
-    fmt = f"{{:.{decimals}f}}"
-    return df.style.format(fmt, na_rep="-")
+    return df.style.format(_fmt_fixed(decimals), na_rep="-")
 
 
 # ---------------------------------------------------------------------------
