@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>7&nbsp; Household Size – Control Totals Validation</title>
+<title>9&nbsp; Household Size – Control Totals Validation</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -251,7 +251,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../summary_scripts/region.html"><b>FORECASTS BY TARGET AREA</b></a></li><li class="breadcrumb-item"><a href="../summary_scripts/household_size.html"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Household Size</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../summary_scripts/region.html"><b>FORECASTS BY TARGET AREA</b></a></li><li class="breadcrumb-item"><a href="../summary_scripts/household_size.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Household Size</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -325,20 +325,32 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../summary_scripts/households_compare_2050.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Households comparison - 2050</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../summary_scripts/households_compare_2060.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Households comparison - 2060</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../summary_scripts/housing_units.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Housing Units</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Housing Units</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../summary_scripts/household_size.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Household Size</span></span></a>
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Household Size</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../summary_scripts/vacancy_rate.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Vacancy Rate</span></span></a>
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Vacancy Rate</span></span></a>
   </div>
 </li>
       </ul>
@@ -353,10 +365,10 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#king-county" id="toc-king-county" class="nav-link active" data-scroll-target="#king-county"><span class="header-section-number">7.1</span> King County</a></li>
-  <li><a href="#pierce-county" id="toc-pierce-county" class="nav-link" data-scroll-target="#pierce-county"><span class="header-section-number">7.2</span> Pierce County</a></li>
-  <li><a href="#snohomish-county" id="toc-snohomish-county" class="nav-link" data-scroll-target="#snohomish-county"><span class="header-section-number">7.3</span> Snohomish County</a></li>
-  <li><a href="#kitsap-county" id="toc-kitsap-county" class="nav-link" data-scroll-target="#kitsap-county"><span class="header-section-number">7.4</span> Kitsap County</a></li>
+  <li><a href="#king-county" id="toc-king-county" class="nav-link active" data-scroll-target="#king-county"><span class="header-section-number">9.1</span> King County</a></li>
+  <li><a href="#pierce-county" id="toc-pierce-county" class="nav-link" data-scroll-target="#pierce-county"><span class="header-section-number">9.2</span> Pierce County</a></li>
+  <li><a href="#snohomish-county" id="toc-snohomish-county" class="nav-link" data-scroll-target="#snohomish-county"><span class="header-section-number">9.3</span> Snohomish County</a></li>
+  <li><a href="#kitsap-county" id="toc-kitsap-county" class="nav-link" data-scroll-target="#kitsap-county"><span class="header-section-number">9.4</span> Kitsap County</a></li>
   </ul>
 </nav>
     </div>
@@ -364,9 +376,9 @@ ul.task-list li input[type="checkbox"] {
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../summary_scripts/region.html"><b>FORECASTS BY TARGET AREA</b></a></li><li class="breadcrumb-item"><a href="../summary_scripts/household_size.html"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Household Size</span></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../summary_scripts/region.html"><b>FORECASTS BY TARGET AREA</b></a></li><li class="breadcrumb-item"><a href="../summary_scripts/household_size.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Household Size</span></a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Household Size</span></h1>
+<h1 class="title"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Household Size</span></h1>
 </div>
 
 
@@ -384,8 +396,8 @@ ul.task-list li input[type="checkbox"] {
 
 
 <p>Average household size = household population / households. Total rows are recomputed from county column sums (not averaged across per-target-area ratios).</p>
-<section id="king-county" class="level2" data-number="7.1">
-<h2 data-number="7.1" class="anchored" data-anchor-id="king-county"><span class="header-section-number">7.1</span> King County</h2>
+<section id="king-county" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="king-county"><span class="header-section-number">9.1</span> King County</h2>
 <div id="6af4e303" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-04-30T20:43:33.599059Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-04-30T20:43:33.598818Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-04-30T20:43:34.577978Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-04-30T20:43:34.577107Z&quot;}}" data-execution_count="2">
 <div class="cell-output cell-output-display cell-output-markdown">
 <div class="tabset-margin-container"></div><div class="panel-tabset">
@@ -4448,8 +4460,8 @@ Total
 </div>
 </div>
 </section>
-<section id="pierce-county" class="level2" data-number="7.2">
-<h2 data-number="7.2" class="anchored" data-anchor-id="pierce-county"><span class="header-section-number">7.2</span> Pierce County</h2>
+<section id="pierce-county" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="pierce-county"><span class="header-section-number">9.2</span> Pierce County</h2>
 <div id="854cdfde" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-04-30T20:43:34.580552Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-04-30T20:43:34.580334Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-04-30T20:43:34.611328Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-04-30T20:43:34.610543Z&quot;}}" data-execution_count="3">
 <div class="cell-output cell-output-display cell-output-markdown">
 <div class="tabset-margin-container"></div><div class="panel-tabset">
@@ -6472,8 +6484,8 @@ Total
 </div>
 </div>
 </section>
-<section id="snohomish-county" class="level2" data-number="7.3">
-<h2 data-number="7.3" class="anchored" data-anchor-id="snohomish-county"><span class="header-section-number">7.3</span> Snohomish County</h2>
+<section id="snohomish-county" class="level2" data-number="9.3">
+<h2 data-number="9.3" class="anchored" data-anchor-id="snohomish-county"><span class="header-section-number">9.3</span> Snohomish County</h2>
 <div id="9ba49f19" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-04-30T20:43:34.614379Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-04-30T20:43:34.614176Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-04-30T20:43:34.654128Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-04-30T20:43:34.653267Z&quot;}}" data-execution_count="4">
 <div class="cell-output cell-output-display cell-output-markdown">
 <div class="tabset-margin-container"></div><div class="panel-tabset">
@@ -9788,8 +9800,8 @@ Total
 </div>
 </div>
 </section>
-<section id="kitsap-county" class="level2" data-number="7.4">
-<h2 data-number="7.4" class="anchored" data-anchor-id="kitsap-county"><span class="header-section-number">7.4</span> Kitsap County</h2>
+<section id="kitsap-county" class="level2" data-number="9.4">
+<h2 data-number="9.4" class="anchored" data-anchor-id="kitsap-county"><span class="header-section-number">9.4</span> Kitsap County</h2>
 <div id="ec84b690" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-04-30T20:43:34.656714Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-04-30T20:43:34.656495Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-04-30T20:43:34.682354Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-04-30T20:43:34.681377Z&quot;}}" data-execution_count="5">
 <div class="cell-output cell-output-display cell-output-markdown">
 <div class="tabset-margin-container"></div><div class="panel-tabset">
@@ -11263,12 +11275,12 @@ Total
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
       <a href="../summary_scripts/housing_units.html" class="pagination-link" aria-label="Housing Units">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Housing Units</span></span>
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Housing Units</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
       <a href="../summary_scripts/vacancy_rate.html" class="pagination-link" aria-label="Vacancy Rate">
-        <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Vacancy Rate</span></span> <i class="bi bi-arrow-right-short"></i>
+        <span class="nav-page-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Vacancy Rate</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

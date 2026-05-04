@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>6&nbsp; Housing Units – Control Totals Validation</title>
+<title>8&nbsp; Housing Units – Control Totals Validation</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -34,7 +34,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
 <link href="../summary_scripts/household_size.html" rel="next">
-<link href="../summary_scripts/households.html" rel="prev">
+<link href="../summary_scripts/households_compare_2060.html" rel="prev">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
@@ -251,7 +251,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../summary_scripts/region.html"><b>FORECASTS BY TARGET AREA</b></a></li><li class="breadcrumb-item"><a href="../summary_scripts/housing_units.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Housing Units</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../summary_scripts/region.html"><b>FORECASTS BY TARGET AREA</b></a></li><li class="breadcrumb-item"><a href="../summary_scripts/housing_units.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Housing Units</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -325,20 +325,32 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../summary_scripts/households_compare_2050.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Households comparison - 2050</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../summary_scripts/households_compare_2060.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Households comparison - 2060</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../summary_scripts/housing_units.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Housing Units</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Housing Units</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../summary_scripts/household_size.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Household Size</span></span></a>
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Household Size</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../summary_scripts/vacancy_rate.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Vacancy Rate</span></span></a>
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Vacancy Rate</span></span></a>
   </div>
 </li>
       </ul>
@@ -353,10 +365,10 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#king-county" id="toc-king-county" class="nav-link active" data-scroll-target="#king-county"><span class="header-section-number">6.1</span> King County</a></li>
-  <li><a href="#pierce-county" id="toc-pierce-county" class="nav-link" data-scroll-target="#pierce-county"><span class="header-section-number">6.2</span> Pierce County</a></li>
-  <li><a href="#snohomish-county" id="toc-snohomish-county" class="nav-link" data-scroll-target="#snohomish-county"><span class="header-section-number">6.3</span> Snohomish County</a></li>
-  <li><a href="#kitsap-county" id="toc-kitsap-county" class="nav-link" data-scroll-target="#kitsap-county"><span class="header-section-number">6.4</span> Kitsap County</a></li>
+  <li><a href="#king-county" id="toc-king-county" class="nav-link active" data-scroll-target="#king-county"><span class="header-section-number">8.1</span> King County</a></li>
+  <li><a href="#pierce-county" id="toc-pierce-county" class="nav-link" data-scroll-target="#pierce-county"><span class="header-section-number">8.2</span> Pierce County</a></li>
+  <li><a href="#snohomish-county" id="toc-snohomish-county" class="nav-link" data-scroll-target="#snohomish-county"><span class="header-section-number">8.3</span> Snohomish County</a></li>
+  <li><a href="#kitsap-county" id="toc-kitsap-county" class="nav-link" data-scroll-target="#kitsap-county"><span class="header-section-number">8.4</span> Kitsap County</a></li>
   </ul>
 </nav>
     </div>
@@ -364,9 +376,9 @@ ul.task-list li input[type="checkbox"] {
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../summary_scripts/region.html"><b>FORECASTS BY TARGET AREA</b></a></li><li class="breadcrumb-item"><a href="../summary_scripts/housing_units.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Housing Units</span></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../summary_scripts/region.html"><b>FORECASTS BY TARGET AREA</b></a></li><li class="breadcrumb-item"><a href="../summary_scripts/housing_units.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Housing Units</span></a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Housing Units</span></h1>
+<h1 class="title"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Housing Units</span></h1>
 </div>
 
 
@@ -384,8 +396,8 @@ ul.task-list li input[type="checkbox"] {
 
 
 <p>Housing-unit counts by target area and county. Derived in <code>calculate_units_for_dashboard.py</code> and persisted as <code>rebased_control_totals_units</code>. Spreadsheet forecasts have no units data.</p>
-<section id="king-county" class="level2" data-number="6.1">
-<h2 data-number="6.1" class="anchored" data-anchor-id="king-county"><span class="header-section-number">6.1</span> King County</h2>
+<section id="king-county" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="king-county"><span class="header-section-number">8.1</span> King County</h2>
 <div id="de7e8d8b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-04-30T20:42:12.489773Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-04-30T20:42:12.489476Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-04-30T20:42:13.183524Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-04-30T20:42:13.182616Z&quot;}}" data-execution_count="2">
 <div class="cell-output cell-output-display cell-output-markdown">
 <div class="tabset-margin-container"></div><div class="panel-tabset">
@@ -3470,8 +3482,8 @@ Not available for this forecast
 </div>
 </div>
 </section>
-<section id="pierce-county" class="level2" data-number="6.2">
-<h2 data-number="6.2" class="anchored" data-anchor-id="pierce-county"><span class="header-section-number">6.2</span> Pierce County</h2>
+<section id="pierce-county" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="pierce-county"><span class="header-section-number">8.2</span> Pierce County</h2>
 <div id="c2aa9ee7" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-04-30T20:42:13.185930Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-04-30T20:42:13.185670Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-04-30T20:42:13.205736Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-04-30T20:42:13.204776Z&quot;}}" data-execution_count="3">
 <div class="cell-output cell-output-display cell-output-markdown">
 <div class="tabset-margin-container"></div><div class="panel-tabset">
@@ -5026,8 +5038,8 @@ Not available for this forecast
 </div>
 </div>
 </section>
-<section id="snohomish-county" class="level2" data-number="6.3">
-<h2 data-number="6.3" class="anchored" data-anchor-id="snohomish-county"><span class="header-section-number">6.3</span> Snohomish County</h2>
+<section id="snohomish-county" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="snohomish-county"><span class="header-section-number">8.3</span> Snohomish County</h2>
 <div id="18763cf4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-04-30T20:42:13.208025Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-04-30T20:42:13.207846Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-04-30T20:42:13.231857Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-04-30T20:42:13.231151Z&quot;}}" data-execution_count="4">
 <div class="cell-output cell-output-display cell-output-markdown">
 <div class="tabset-margin-container"></div><div class="panel-tabset">
@@ -7551,8 +7563,8 @@ Not available for this forecast
 </div>
 </div>
 </section>
-<section id="kitsap-county" class="level2" data-number="6.4">
-<h2 data-number="6.4" class="anchored" data-anchor-id="kitsap-county"><span class="header-section-number">6.4</span> Kitsap County</h2>
+<section id="kitsap-county" class="level2" data-number="8.4">
+<h2 data-number="8.4" class="anchored" data-anchor-id="kitsap-county"><span class="header-section-number">8.4</span> Kitsap County</h2>
 <div id="8cde1c2d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-04-30T20:42:13.234728Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-04-30T20:42:13.234553Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-04-30T20:42:13.250609Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-04-30T20:42:13.249940Z&quot;}}" data-execution_count="5">
 <div class="cell-output cell-output-display cell-output-markdown">
 <div class="tabset-margin-container"></div><div class="panel-tabset">
@@ -8812,13 +8824,13 @@ Not available for this forecast
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="../summary_scripts/households.html" class="pagination-link" aria-label="Households">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Households</span></span>
+      <a href="../summary_scripts/households_compare_2060.html" class="pagination-link" aria-label="Households comparison - 2060">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Households comparison - 2060</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
       <a href="../summary_scripts/household_size.html" class="pagination-link" aria-label="Household Size">
-        <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Household Size</span></span> <i class="bi bi-arrow-right-short"></i>
+        <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Household Size</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
