@@ -10,6 +10,10 @@
 #                          requires xwalk_path + base_year/targets_end_year/end_year
 forecasts:
 
+  - name: Vision 2060 Scaled by County
+    path: ../../examples/vision_2060_scaled_cnty
+    type: pipeline
+
   - name: Vision 2060 Scaled
     path: ../../examples/vision_2060_scaled
     type: pipeline

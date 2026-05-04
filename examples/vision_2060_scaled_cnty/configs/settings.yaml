@@ -85,7 +85,7 @@ nat_resource_sliver_buffer: 500 # buffer distance in feet for identifying sliver
 #----------------------------
 rebased_targets:
   input_file: control_id_working.xlsx    # city-level targets input file (in data_dir)
-  scale_to_ref: region                   # one of: none | region | county. region requires REF in wide format (variable + year columns)
+  scale_to_ref: county                   # one of: none | region | county. county requires REF in long format (county_id, year, ...)
   round_interpolated: false              # round interpolated values to integers
   stepped_years: [2023, 2025, 2030, 2035, 2040, 2044, 2050, 2055, 2060] # years for stepped (5-year interval) output
   output_targets_file: TargetsRebasedOutput.xlsx   # rebased targets workbook filename (in output_dir)
@@ -278,6 +278,9 @@ data_tables:
  - name: ref_projection
    file: REF_REMI_v3.3.csv
 
+ - name: ref_projection_by_county
+   file: REF_REMI_v3.3_by_county.csv
+
  - name: employment_2018_by_control_area
    file: Employment 2018.csv
 
@@ -367,5 +370,5 @@ steps:
 #  - steps.parcels_capacity # calculates capacities
 #  - steps.create_control_totals_rebased_targets # creates rebased targets and interpolated control totals in Python
 #  - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
-#  - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
+ - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
  - steps.calculate_units_for_dashboard

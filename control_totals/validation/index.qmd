@@ -33,6 +33,7 @@ recomputed from the summed numerator and denominator (not averaged).
 
 | Forecast | Targets vintage | REMI scaling | Notes |
 |---|---|---|---|
+| **Vision 2060 Scaled by County** | 2026 targets | Scaled to REMI v3.3 by county | Pipeline run |
 | **Vision 2060 Scaled** | 2026 targets | Scaled to REMI v3.3 | Pipeline run |
 | **Vision 2060**        | 2026 targets | Not scaled         | Pipeline run |
 | **Summer 2026**        | 2026 targets | Not scaled         | Pipeline run |
@@ -40,9 +41,10 @@ recomputed from the summed numerator and denominator (not averaged).
 
 Both Vision forecasts and Summer 2026 use the updated **2026** county
 targets; Legacy LUVit (RTP26) carries the older **2021** targets.
-Only **Vision 2060 Scaled** has been rescaled to match the
-**REMI v3.3** regional forecast — the others retain their native
-target totals.
+**Vision 2060 Scaled** has been rescaled to match the **REMI v3.3**
+regional forecast, and **Vision 2060 Scaled by County** has been
+rescaled to match REMI v3.3 independently per county — the others
+retain their native target totals.
 
 ## Pointing the dashboard at runs
 

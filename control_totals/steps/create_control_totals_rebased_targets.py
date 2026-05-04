@@ -265,106 +265,303 @@ def build_rebased_targets(city_data, ref_base_year, base_year, target_year):
 	return {'RGs': rgs_target, 'CityPop': city_rgs_pop, 'CityHH': city_rgs_hh, 'CityEmp': city_rgs_emp}
 
 
+REF_INDICATOR_MAP = {
+	'Pop': 'Tot Pop',
+	'HHPop': 'HH Pop',
+	'HH': 'HH',
+	'Emp': 'Total Emp w/o Enlisted',
+}
+
+
+def _resolve_scale_mode(value):
+	"""Normalize the ``scale_to_ref`` setting to ``'none'``, ``'region'``, or ``'county'``.
+
+	Accepts the new string enum (``none``/``region``/``county``) and falls
+	back to the legacy boolean form (``True`` -> ``region``, ``False`` ->
+	``none``) for backward compatibility.
+
+	Args:
+		value: The raw setting value.
+
+	Returns:
+		str: ``'none'``, ``'region'``, or ``'county'``.
+
+	Raises:
+		ValueError: If *value* is not one of the recognized options.
+	"""
+	if value is None or value is False:
+		return 'none'
+	if value is True:
+		return 'region'
+	if isinstance(value, str):
+		normalized = value.strip().lower()
+		if normalized in ('none', 'region', 'county'):
+			return normalized
+	raise ValueError(
+		f"rebased_targets.scale_to_ref must be one of: none, region, county. Got {value!r}."
+	)
+
+
 def load_regional_totals(pipeline, base_year):
 	"""Load Regional Economic Forecast (REF) projection totals for optional scaling.
 
 	Returns ``None`` when scaling is disabled via
-	``rebased_targets.scale_to_ref`` or no REF projection years beyond
-	the base year are available.
+	``rebased_targets.scale_to_ref`` or no REF projection years are
+	available. The returned shape depends on the configured scaling mode:
+
+	* ``region`` -> ``dict[str, pandas.Series]`` keyed by indicator, each
+	  Series indexed by year string. Reads from the ``ref_projection``
+	  data table, which must be in the wide format (a ``variable`` column
+	  plus one column per year).
+	* ``county`` -> ``dict[str, pandas.DataFrame]`` keyed by indicator,
+	  each DataFrame indexed by ``county_id`` with year-string columns.
+	  Reads from the ``ref_projection_by_county`` data table, which must
+	  be in the long format with ``county_id`` and ``year`` columns plus
+	  one column per indicator.
 
 	Args:
 		pipeline (Pipeline): The data pipeline providing access to settings
 			and stored tables.
-		base_year (int): The rebase base year; only projection years after
-			this are considered.
+		base_year (int): The rebase base year. The base year is retained in
+			the loader output so that downstream interpolation has a left
+			anchor; :func:`_expand_ref_totals` removes it from the result
+			so it is not used to rescale base-year totals.
 
 	Returns:
-		dict or None: A dictionary mapping indicator names (``'Pop'``,
-			``'HHPop'``, ``'HH'``, ``'Emp'``) to pandas.Series of regional
-			totals indexed by year string, or ``None`` if scaling is disabled.
+		dict or None: A dictionary keyed by indicator name (``'Pop'``,
+		``'HHPop'``, ``'HH'``, ``'Emp'``), or ``None`` if scaling is
+		disabled or no usable REF data is available.
+
+	Raises:
+		ValueError: If the configured mode is unrecognized, or if the REF
+			table shape does not match the requested mode.
 	"""
 	cfg = pipeline.settings.get('rebased_targets', {})
-	if not cfg.get('scale_to_ref', False):
+	mode = _resolve_scale_mode(cfg.get('scale_to_ref'))
+	if mode == 'none':
 		return None
 
-	ref_projection = pipeline.get_table('ref_projection').copy()
-	numeric_columns = [column for column in ref_projection.columns if str(column).isdigit()]
-	numeric_columns = [column for column in numeric_columns if int(column) > base_year]
-	if not numeric_columns:
+	table_name = 'ref_projection' if mode == 'region' else 'ref_projection_by_county'
+	ref_projection = pipeline.get_table(table_name).copy()
+
+	if mode == 'region':
+		numeric_columns = [column for column in ref_projection.columns if str(column).isdigit()]
+		if not numeric_columns:
+			return None
+		if 'variable' not in ref_projection.columns:
+			raise ValueError(
+				"scale_to_ref: region requires the ref_projection table to have a 'variable' column "
+				"and one column per year (wide format)."
+			)
+		totals = {}
+		for indicator, variable_name in REF_INDICATOR_MAP.items():
+			matches = ref_projection.loc[ref_projection['variable'] == variable_name, numeric_columns]
+			if matches.empty:
+				continue
+			series = matches.iloc[0].astype(float)
+			series.index = series.index.astype(str)
+			totals[indicator] = series
+		return totals or None
+
+	# mode == 'county'
+	if 'county_id' not in ref_projection.columns or 'year' not in ref_projection.columns:
+		raise ValueError(
+			"scale_to_ref: county requires the ref_projection table to have 'county_id' and 'year' "
+			"columns (long format)."
+		)
+	df = ref_projection.copy()
+	df['year'] = df['year'].astype(int)
+	if df.empty:
 		return None
-
-	indicator_map = {
-		'Pop': 'Tot Pop',
-		'HHPop': 'HH Pop',
-		'HH': 'HH',
-		'Emp': 'Total Emp w/o Enlisted',
-	}
-
 	totals = {}
-	for indicator, variable_name in indicator_map.items():
-		matches = ref_projection.loc[ref_projection['variable'] == variable_name, numeric_columns]
-		if matches.empty:
+	for indicator, column_name in REF_INDICATOR_MAP.items():
+		if column_name not in df.columns:
 			continue
-		totals[indicator] = matches.iloc[0].astype(float)
-		totals[indicator].index = totals[indicator].index.astype(str)
+		pivot = df.pivot_table(index='county_id', columns='year', values=column_name, aggfunc='first')
+		pivot.columns = [str(column) for column in pivot.columns]
+		totals[indicator] = pivot.astype(float)
 	return totals or None
 
 
-def interpolate_controls_with_anchors(df, indicator, anchor_years, years_to_fit, totals=None, id_col='control_id', round_interpolated=False):
-	"""Interpolate control totals between anchor years and optionally scale to regional totals.
+def _expand_ref_totals(totals, years_to_fit, base_year):
+	"""Linearly interpolate REF totals to every output year and drop the base year.
+
+	The base year is removed from the output so that downstream scaling
+	leaves base-year sums (which come directly from the input data)
+	unchanged.
+
+	Args:
+		totals (dict or None): The mapping returned by
+			:func:`load_regional_totals`.
+		years_to_fit (list[int]): Years for which expanded totals are
+			needed.
+		base_year (int): The rebase base year; entries for this year are
+			dropped from the expanded result.
+
+	Returns:
+		dict or None: A new mapping with the same keys as *totals* whose
+		values are interpolated Series (region) or DataFrames (county)
+		indexed/columned by year string. Returns ``None`` when *totals*
+		is ``None``.
+	"""
+	if totals is None:
+		return None
+
+	base_year_str = str(base_year)
+	expanded = {}
+	for indicator, data in totals.items():
+		if isinstance(data, pd.Series):
+			anchor_years = sorted(int(year) for year in data.index)
+			anchor_values = data.loc[[str(year) for year in anchor_years]].to_numpy(dtype=float)
+			fit_years = [year for year in years_to_fit if year >= anchor_years[0]]
+			if not fit_years:
+				continue
+			interpolated = np.interp(fit_years, anchor_years, anchor_values)
+			series = pd.Series(interpolated, index=[str(year) for year in fit_years])
+			if base_year_str in series.index:
+				series = series.drop(base_year_str)
+			if not series.empty:
+				expanded[indicator] = series
+		elif isinstance(data, pd.DataFrame):
+			anchor_years = sorted(int(column) for column in data.columns)
+			anchor_columns = [str(year) for year in anchor_years]
+			fit_years = [year for year in years_to_fit if year >= anchor_years[0]]
+			if not fit_years:
+				continue
+			anchor_array = data[anchor_columns].to_numpy(dtype=float)
+			interpolated = np.vstack([
+				np.interp(fit_years, anchor_years, row) for row in anchor_array
+			])
+			frame = pd.DataFrame(
+				interpolated,
+				index=data.index,
+				columns=[str(year) for year in fit_years],
+			)
+			if base_year_str in frame.columns:
+				frame = frame.drop(columns=[base_year_str])
+			if not frame.empty:
+				expanded[indicator] = frame
+	return expanded or None
+
+
+def _detect_totals_mode(regtot):
+	"""Infer the scaling mode from the REF totals structure.
+
+	Args:
+		regtot (dict or None): The mapping returned by
+			:func:`load_regional_totals`.
+
+	Returns:
+		str: ``'none'``, ``'region'``, or ``'county'``.
+	"""
+	if regtot is None:
+		return 'none'
+	sample = next(iter(regtot.values()), None)
+	if isinstance(sample, pd.DataFrame):
+		return 'county'
+	return 'region'
+
+
+def _apply_scaling(result, row_indices, years_to_fit, totals):
+	"""Rescale a block of rows in *result* in place to match per-year *totals*.
+
+	For each year (after the first), the difference between the year's
+	current sum across *row_indices* and the target total is distributed
+	in proportion to each row's year-over-year increment.
+
+	Args:
+		result (numpy.ndarray): The full interpolated array (modified in
+			place).
+		row_indices (numpy.ndarray): Integer positions of the rows to
+			rescale.
+		years_to_fit (list[int]): The years corresponding to *result*'s
+			columns.
+		totals (pandas.Series): Year-string-indexed target totals.
+	"""
+	if row_indices.size == 0:
+		return
+	block = result[row_indices]
+	diffs = block[:, 1:] - block[:, :-1]
+	for index in range(1, len(years_to_fit)):
+		year = str(years_to_fit[index])
+		if year not in totals.index:
+			continue
+		total_diff = float(totals.loc[year]) - block[:, index].sum()
+		if total_diff == 0:
+			continue
+		denom = diffs[:, index - 1].sum()
+		if denom == 0:
+			shares = np.full(block.shape[0], 1 / block.shape[0])
+		else:
+			shares = diffs[:, index - 1] / denom
+		block[:, index] = np.maximum(0, block[:, index] + shares * total_diff)
+	result[row_indices] = block
+
+
+def interpolate_controls_with_anchors(df, indicator, anchor_years, years_to_fit, totals=None,
+									  id_col='control_id', group_col=None, round_interpolated=False):
+	"""Interpolate control totals between anchor years and optionally scale to REF totals.
 
 	Performs linear interpolation of an indicator between anchor years for
-	each geography, then adjusts increments so that annual sums match an
-	optional regional-totals series.
+	each geography, then adjusts increments so that annual sums match the
+	supplied REF totals. When *totals* is a Series, scaling is applied
+	region-wide. When *totals* is a DataFrame keyed by *group_col*,
+	scaling is applied independently within each group (e.g. per county).
 
 	Args:
 		df (pandas.DataFrame): DataFrame containing anchor-year columns
-			named ``<indicator><year>`` and an ID column.
+			named ``<indicator><year>``, an ID column, and optionally a
+			group column.
 		indicator (str): The indicator prefix (e.g. ``'HH'``, ``'Emp'``).
 		anchor_years (list[int]): Sorted years for which values exist.
 		years_to_fit (list[int]): Years to produce interpolated values for.
-		totals (pandas.Series, optional): Regional totals indexed by year
-			string used to scale the interpolated values. Defaults to None.
+		totals (pandas.Series or pandas.DataFrame, optional): Either a
+			Series of region-wide totals indexed by year string, or a
+			DataFrame indexed by group key with year-string columns.
+			Defaults to None.
 		id_col (str, optional): Column name for the geography identifier.
 			Defaults to ``'control_id'``.
+		group_col (str, optional): Column name to group by when *totals*
+			is a DataFrame (e.g. ``'county_id'``). Required for per-group
+			scaling. Defaults to None.
 		round_interpolated (bool, optional): Whether to round interpolated
 			values to the nearest integer. Defaults to False.
 
 	Returns:
-		pandas.DataFrame: Wide DataFrame with the ID column and one column
-			per year in *years_to_fit*.
+		pandas.DataFrame: Wide DataFrame with the ID column (and group
+		column when *group_col* is supplied) followed by one column per
+		year in *years_to_fit*.
 	"""
 	anchor_columns = [f'{indicator}{year}' for year in anchor_years]
-	grouped = df.groupby(id_col, sort=False)[anchor_columns].sum().reset_index()
+	keys = [id_col] if group_col is None else [id_col, group_col]
+	grouped = df.groupby(keys, sort=False)[anchor_columns].sum().reset_index()
 
-	series = []
-	for _, row in grouped.iterrows():
-		values = row[anchor_columns].to_numpy(dtype=float)
-		series.append(np.interp(years_to_fit, anchor_years, values))
-
-	result = np.vstack(series) if series else np.empty((0, len(years_to_fit)))
+	if grouped.empty:
+		result = np.empty((0, len(years_to_fit)))
+	else:
+		result = np.vstack([
+			np.interp(years_to_fit, anchor_years, row[anchor_columns].to_numpy(dtype=float))
+			for _, row in grouped.iterrows()
+		])
 
 	if totals is not None and result.size:
-		diffs = result[:, 1:] - result[:, :-1]
-		for index in range(1, len(years_to_fit)):
-			year = str(years_to_fit[index])
-			if year not in totals.index:
-				continue
-			total_diff = float(totals.loc[year]) - result[:, index].sum()
-			if total_diff == 0:
-				continue
-			denom = diffs[:, index - 1].sum()
-			if denom == 0:
-				shares = np.full(result.shape[0], 1 / result.shape[0])
-			else:
-				shares = diffs[:, index - 1] / denom
-			result[:, index] = np.maximum(0, result[:, index] + shares * total_diff)
+		if isinstance(totals, pd.DataFrame):
+			if group_col is None:
+				raise ValueError('group_col is required when totals is a DataFrame.')
+			for group_value, indices in grouped.groupby(group_col, sort=False).indices.items():
+				if group_value not in totals.index:
+					continue
+				_apply_scaling(result, np.asarray(indices), years_to_fit, totals.loc[group_value])
+		else:
+			_apply_scaling(result, np.arange(result.shape[0]), years_to_fit, totals)
 
 	if round_interpolated:
 		result = np.rint(result)
 
 	interpolated = pd.DataFrame(result, columns=[str(year) for year in years_to_fit])
 	interpolated.insert(0, id_col, grouped[id_col].to_numpy())
+	if group_col is not None:
+		interpolated.insert(1, group_col, grouped[group_col].to_numpy())
 	return interpolated
 
 
@@ -406,44 +603,85 @@ def _distribute_difference(values, difference):
 	return adjusted
 
 
-def unroll_controls(ct, indicator, totals=None, new_id_col='subreg_id'):
-	"""Melt a wide control-totals table into long format and optionally adjust to regional totals.
+def unroll_controls(ct, indicator, totals=None, new_id_col='subreg_id', group_col=None):
+	"""Melt a wide control-totals table into long format and optionally redistribute integer
+	rounding deltas so per-year sums match the supplied REF totals.
 
 	Converts the wide interpolated table (one column per year) into a long
 	table with ``year`` and ``value`` columns, then redistributes any
-	difference between the year sums and the regional totals series.
+	difference between the year sums and the REF totals. When *totals* is
+	a DataFrame keyed by *group_col*, redistribution is performed
+	independently within each group (e.g. per county).
 
 	Args:
-		ct (pandas.DataFrame): Wide control-totals DataFrame with an ID
-			column and year columns.
+		ct (pandas.DataFrame): Wide control-totals DataFrame produced by
+			:func:`interpolate_controls_with_anchors`. The first column is
+			the ID column; if *group_col* is supplied it is the second
+			column. Remaining columns are year-string values.
 		indicator (str): The indicator name (e.g. ``'HH'``), used to name
 			the value column as ``total_<indicator lower>``.
-		totals (pandas.Series, optional): Regional totals indexed by year
-			string. Defaults to None.
+		totals (pandas.Series or pandas.DataFrame, optional): REF totals to
+			scale to. Defaults to None.
 		new_id_col (str, optional): Name for the geography ID column in
 			the output. Defaults to ``'subreg_id'``.
+		group_col (str, optional): Column name used to group rows for
+			per-group redistribution when *totals* is a DataFrame.
+			Defaults to None.
 
 	Returns:
 		pandas.DataFrame: Long-format DataFrame with columns
-			``[new_id_col, 'year', 'total_<indicator>']``.
+		``[new_id_col, 'year', 'total_<indicator>']``. The *group_col*
+		is dropped from the output.
 	"""
 	wide = ct.copy()
-	long = wide.melt(id_vars=wide.columns[0], var_name='year', value_name='value')
-	long = long.rename(columns={wide.columns[0]: new_id_col})
+	id_col = wide.columns[0]
+	id_vars = [id_col] + ([group_col] if group_col is not None else [])
+	long = wide.melt(id_vars=id_vars, var_name='year', value_name='value')
+	long = long.rename(columns={id_col: new_id_col})
 	long['value'] = long['value'].round().astype(int)
 	long['year'] = long['year'].astype(str)
 
 	if totals is not None:
-		year_totals = long.groupby('year', as_index=False)['value'].sum().rename(columns={'value': 'ct'})
-		targets = totals.rename('should_be').reset_index().rename(columns={'index': 'year'})
-		diffs = year_totals.merge(targets, on='year', how='inner')
-		diffs['dif'] = (diffs['should_be'] - diffs['ct']).round().astype(int)
+		if isinstance(totals, pd.DataFrame):
+			if group_col is None:
+				raise ValueError('group_col is required when totals is a DataFrame.')
+			for group_value, group_rows in long.groupby(group_col, sort=False):
+				if group_value not in totals.index:
+					continue
+				_redistribute_block(long, group_rows.index, totals.loc[group_value])
+		else:
+			_redistribute_block(long, long.index, totals)
 
-		for _, row in diffs.iterrows():
-			year_mask = long['year'] == row['year']
-			long.loc[year_mask, 'value'] = _distribute_difference(long.loc[year_mask, 'value'], row['dif']).to_numpy()
-
+	if group_col is not None:
+		long = long.drop(columns=[group_col])
 	return long.rename(columns={'value': f'total_{indicator.lower()}'})
+
+
+def _redistribute_block(long, row_indices, totals):
+	"""Redistribute integer rounding deltas within a subset of rows so per-year
+	sums match the supplied totals.
+
+	Args:
+		long (pandas.DataFrame): Long-format DataFrame with at least
+			``'year'`` and ``'value'`` columns; modified in place.
+		row_indices (pandas.Index): Index of the rows in *long* to
+			operate on.
+		totals (pandas.Series): Year-string-indexed target totals.
+	"""
+	subset = long.loc[row_indices]
+	year_totals = subset.groupby('year', as_index=False)['value'].sum().rename(columns={'value': 'ct'})
+	targets = totals.rename('should_be').reset_index()
+	targets.columns = ['year', 'should_be']
+	targets['year'] = targets['year'].astype(str)
+	diffs = year_totals.merge(targets, on='year', how='inner')
+	diffs['dif'] = (diffs['should_be'] - diffs['ct']).round().astype(int)
+
+	for _, row in diffs.iterrows():
+		year_mask = subset['year'] == row['year']
+		year_indices = subset.index[year_mask]
+		long.loc[year_indices, 'value'] = _distribute_difference(
+			long.loc[year_indices, 'value'], row['dif']
+		).to_numpy()
 
 
 def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, target_year,
@@ -451,13 +689,17 @@ def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, ta
 	"""Interpolate rebased targets into stepped and annual control-totals sheets.
 
 	Produces interpolated control totals at the configured stepped years and
-	an unrolled long-format table, plus an annual regional summary.
+	an unrolled long-format table, plus an annual regional summary. When
+	*regtot* is a per-county mapping, scaling and rounding redistribution
+	are applied independently within each county.
 
 	Args:
 		outputs (dict): Dictionary of DataFrames returned by
 			:func:`build_rebased_targets`.
-		regtot (dict or None): Optional regional totals from
-			:func:`load_regional_totals`.
+		regtot (dict or None): Optional REF totals from
+			:func:`load_regional_totals`. Series values trigger region-wide
+			scaling; DataFrame values (indexed by ``county_id``) trigger
+			per-county scaling.
 		ref_base_year (int): The REF (Regional Economic Forecast) base year.
 		base_year (int): The rebase base year.
 		target_year (int): The target horizon year.
@@ -486,37 +728,57 @@ def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, ta
 		'Pop': outputs['CityPop'],
 	}
 
+	mode = _detect_totals_mode(regtot)
+	group_col = 'county_id' if mode == 'county' else None
+
 	cts = {}
 	unrolled = None
+	stepped_totals = _expand_ref_totals(regtot, stepped_years, base_year)
 	for indicator, frame in to_interpolate.items():
-		totals = None if regtot is None else regtot.get(indicator)
-		cts[indicator] = interpolate_controls_with_anchors(
+		totals = None if stepped_totals is None else stepped_totals.get(indicator)
+		wide_ct = interpolate_controls_with_anchors(
 			frame.sort_values('control_id'),
 			indicator,
 			anchor_years=anchors,
 			years_to_fit=stepped_years,
 			totals=totals,
+			group_col=group_col,
 			round_interpolated=round_interpolated,
 		)
-		current_unrolled = unroll_controls(cts[indicator], indicator, totals=totals, new_id_col='subreg_id')
-		unrolled = current_unrolled if unrolled is None else unrolled.merge(current_unrolled, on=['subreg_id', 'year'], how='outer')
+		current_unrolled = unroll_controls(
+			wide_ct, indicator, totals=totals, new_id_col='subreg_id', group_col=group_col
+		)
+		unrolled = current_unrolled if unrolled is None else unrolled.merge(
+			current_unrolled, on=['subreg_id', 'year'], how='outer'
+		)
+		# Drop the group helper column from the wide CT so the per-indicator output
+		# schema (control_id + year columns) is unchanged across modes.
+		if group_col is not None:
+			wide_ct = wide_ct.drop(columns=[group_col])
+		cts[indicator] = wide_ct
 
 	cts['unrolled'] = unrolled
 
 	all_years = list(range(ref_base_year, target_year + 1))
+	annual_totals = _expand_ref_totals(regtot, all_years, base_year)
 	unrolled_all = None
 	for indicator, frame in to_interpolate.items():
-		totals = None if regtot is None else regtot.get(indicator)
+		totals = None if annual_totals is None else annual_totals.get(indicator)
 		ct_all = interpolate_controls_with_anchors(
 			frame.sort_values('control_id'),
 			indicator,
 			anchor_years=anchors,
 			years_to_fit=all_years,
 			totals=totals,
+			group_col=group_col,
 			round_interpolated=round_interpolated,
 		)
-		current_unrolled = unroll_controls(ct_all, indicator, totals=totals, new_id_col='subreg_id')
-		unrolled_all = current_unrolled if unrolled_all is None else unrolled_all.merge(current_unrolled, on=['subreg_id', 'year'], how='outer')
+		current_unrolled = unroll_controls(
+			ct_all, indicator, totals=totals, new_id_col='subreg_id', group_col=group_col
+		)
+		unrolled_all = current_unrolled if unrolled_all is None else unrolled_all.merge(
+			current_unrolled, on=['subreg_id', 'year'], how='outer'
+		)
 
 	value_columns = [column for column in unrolled_all.columns if column not in {'year', 'subreg_id'}]
 	unrolled_regional = unrolled_all.groupby('year', as_index=False)[value_columns].sum()
@@ -574,11 +836,19 @@ def run_step(context):
 
 		rebased_targets:
 		  input_file: control_id_working.xlsx
-		  scale_to_ref: false
+		  scale_to_ref: none           # one of: none | region | county
 		  round_interpolated: false
 		  stepped_years: [2018, 2020, 2025, 2030, 2035, 2040, 2044, 2050]
 		  output_targets_file: TargetsRebasedOutput.xlsx
 		  output_controls_file: Control-Totals-LUVit.xlsx
+
+	When ``scale_to_ref`` is ``region`` the ``ref_projection`` data table
+	must be in the wide format (a ``variable`` column plus one column per
+	year). When ``scale_to_ref`` is ``county`` a separate
+	``ref_projection_by_county`` data table must be registered in the
+	long format with ``county_id`` and ``year`` columns plus one column
+	per indicator. The legacy boolean form (``true``/``false``) is still
+	accepted for backward compatibility (``true`` -> ``region``).
 
 	Args:
 		context (dict): The pypyr context dictionary, expected to contain
