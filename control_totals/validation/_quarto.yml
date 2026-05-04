@@ -22,6 +22,8 @@ book:
         - summary_scripts/population.ipynb
         - summary_scripts/household_population.ipynb
         - summary_scripts/households.ipynb
+        - summary_scripts/households_compare_2050.ipynb
+        - summary_scripts/households_compare_2060.ipynb
         - summary_scripts/housing_units.ipynb
         - summary_scripts/household_size.ipynb
         - summary_scripts/vacancy_rate.ipynb
