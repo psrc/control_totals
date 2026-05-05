@@ -462,6 +462,40 @@ def _detect_totals_mode(regtot):
 	return 'region'
 
 
+def _align_county_index(regtot, target_county_ids):
+	"""Reconcile REF county_id form with the form used in city tables.
+
+	The REF by-county file typically uses full FIPS codes (e.g. ``53033``)
+	while the city-level tables in this codebase may use the short county
+	code (e.g. ``33``). This helper detects a uniform mismatch and remaps
+	the REF DataFrames' index to match.
+
+	Args:
+		regtot (dict[str, pandas.DataFrame]): Per-indicator REF totals.
+		target_county_ids (Iterable[int]): The county_id values used in
+			the city-level tables.
+
+	Returns:
+		dict[str, pandas.DataFrame]: A new dict with aligned indexes. If
+			no remap is necessary or possible, *regtot* is returned
+			unchanged.
+	"""
+	target = set(int(v) for v in pd.Series(target_county_ids).dropna().unique())
+	if not target:
+		return regtot
+	sample = next(iter(regtot.values()))
+	source = set(int(v) for v in sample.index)
+	if source == target:
+		return regtot
+	# Try modulo 1000 (full FIPS -> short).
+	short_to_full = {v % 1000: v for v in source}
+	if set(short_to_full.keys()) >= target:
+		return {k: v.rename(index={full: full % 1000 for full in source}) for k, v in regtot.items()}
+	# Try adding state prefix (short -> full FIPS) using the most common WA prefix in target.
+	# Fall back to no change if neither alignment works.
+	return regtot
+
+
 def _apply_scaling(result, row_indices, years_to_fit, totals):
 	"""Rescale a block of rows in *result* in place to match per-year *totals*.
 
@@ -730,6 +764,13 @@ def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, ta
 
 	mode = _detect_totals_mode(regtot)
 	group_col = 'county_id' if mode == 'county' else None
+
+	if mode == 'county':
+		# city_data county_id may be stored in short form (e.g. 33) while the
+		# by-county REF table uses the full FIPS code (e.g. 53033). Reconcile
+		# the REF index to whatever form the city tables use so per-county
+		# lookups match.
+		regtot = _align_county_index(regtot, outputs['CityPop']['county_id'])
 
 	cts = {}
 	unrolled = None
