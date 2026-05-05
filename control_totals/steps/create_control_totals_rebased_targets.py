@@ -383,12 +383,15 @@ def load_regional_totals(pipeline, base_year):
 	return totals or None
 
 
-def _expand_ref_totals(totals, years_to_fit, base_year):
+def _expand_ref_totals(totals, years_to_fit, base_year, scale_start_year=None):
 	"""Linearly interpolate REF totals to every output year and drop the base year.
 
 	The base year is removed from the output so that downstream scaling
 	leaves base-year sums (which come directly from the input data)
-	unchanged.
+	unchanged. When *scale_start_year* is supplied, years strictly less
+	than it are also dropped, so only years ``>= scale_start_year`` are
+	rescaled by downstream callers (earlier years keep their unscaled
+	linear-interpolation values).
 
 	Args:
 		totals (dict or None): The mapping returned by
@@ -397,6 +400,10 @@ def _expand_ref_totals(totals, years_to_fit, base_year):
 			needed.
 		base_year (int): The rebase base year; entries for this year are
 			dropped from the expanded result.
+		scale_start_year (int, optional): When supplied, drop entries for
+			years strictly less than this value so that downstream scaling
+			leaves earlier years untouched. Defaults to None (scale all
+			available years).
 
 	Returns:
 		dict or None: A new mapping with the same keys as *totals* whose
@@ -420,6 +427,9 @@ def _expand_ref_totals(totals, years_to_fit, base_year):
 			series = pd.Series(interpolated, index=[str(year) for year in fit_years])
 			if base_year_str in series.index:
 				series = series.drop(base_year_str)
+			if scale_start_year is not None:
+				keep = [idx for idx in series.index if int(idx) >= scale_start_year]
+				series = series.loc[keep]
 			if not series.empty:
 				expanded[indicator] = series
 		elif isinstance(data, pd.DataFrame):
@@ -439,6 +449,9 @@ def _expand_ref_totals(totals, years_to_fit, base_year):
 			)
 			if base_year_str in frame.columns:
 				frame = frame.drop(columns=[base_year_str])
+			if scale_start_year is not None:
+				keep = [col for col in frame.columns if int(col) >= scale_start_year]
+				frame = frame[keep]
 			if not frame.empty:
 				expanded[indicator] = frame
 	return expanded or None
@@ -719,7 +732,8 @@ def _redistribute_block(long, row_indices, totals):
 
 
 def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, target_year,
-								   round_interpolated=False, stepped_years=None):
+								   round_interpolated=False, stepped_years=None,
+								   scale_start_year=None):
 	"""Interpolate rebased targets into stepped and annual control-totals sheets.
 
 	Produces interpolated control totals at the configured stepped years and
@@ -743,6 +757,10 @@ def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, ta
 			stepped output. When ``None``, defaults to 5-year intervals
 			from *base_year* through *target_year*, plus the REF
 			base year.
+		scale_start_year (int, optional): When supplied, only years
+			``>= scale_start_year`` are rescaled to the REF totals;
+			earlier years keep their unscaled linear-interpolation values
+			between the input anchors. Defaults to None (scale all years).
 
 	Returns:
 		dict: A dictionary of DataFrames keyed by indicator name plus
@@ -774,7 +792,7 @@ def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, ta
 
 	cts = {}
 	unrolled = None
-	stepped_totals = _expand_ref_totals(regtot, stepped_years, base_year)
+	stepped_totals = _expand_ref_totals(regtot, stepped_years, base_year, scale_start_year)
 	for indicator, frame in to_interpolate.items():
 		totals = None if stepped_totals is None else stepped_totals.get(indicator)
 		wide_ct = interpolate_controls_with_anchors(
@@ -801,7 +819,7 @@ def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, ta
 	cts['unrolled'] = unrolled
 
 	all_years = list(range(ref_base_year, target_year + 1))
-	annual_totals = _expand_ref_totals(regtot, all_years, base_year)
+	annual_totals = _expand_ref_totals(regtot, all_years, base_year, scale_start_year)
 	unrolled_all = None
 	for indicator, frame in to_interpolate.items():
 		totals = None if annual_totals is None else annual_totals.get(indicator)
@@ -878,6 +896,7 @@ def run_step(context):
 		rebased_targets:
 		  input_file: control_id_working.xlsx
 		  scale_to_ref: none           # one of: none | region | county
+		  scale_start_year: null       # optional; only rescale years >= this year
 		  round_interpolated: false
 		  stepped_years: [2018, 2020, 2025, 2030, 2035, 2040, 2044, 2050]
 		  output_targets_file: TargetsRebasedOutput.xlsx
@@ -908,6 +927,9 @@ def run_step(context):
 	regtot = load_regional_totals(pipeline, base_year)
 	round_interpolated = cfg.get('round_interpolated', False)
 	stepped_years = cfg.get('stepped_years', None)
+	scale_start_year = cfg.get('scale_start_year', None)
+	if scale_start_year is not None:
+		scale_start_year = int(scale_start_year)
 	cts = build_control_totals_workbooks(
 		outputs,
 		regtot,
@@ -916,6 +938,7 @@ def run_step(context):
 		target_year,
 		round_interpolated=round_interpolated,
 		stepped_years=stepped_years,
+		scale_start_year=scale_start_year,
 	)
 
 	output_dir = Path(pipeline.get_output_dir())
