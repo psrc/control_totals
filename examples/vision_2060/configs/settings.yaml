@@ -369,3 +369,4 @@ steps:
 #  - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
 #  - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
  - steps.calculate_units_for_dashboard
+ - steps.render_validation_dashboard # executes validation notebooks and runs `quarto render`

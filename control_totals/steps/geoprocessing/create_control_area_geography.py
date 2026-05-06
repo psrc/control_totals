@@ -254,5 +254,6 @@ def run_step(context):
     # save control areas to h5
     p.save_geodataframe('control_areas',gdf)
     # save control areas to geodatabase for use in ArcGIS
-    gdf[['control_id','control_name','geometry']].to_file(p.get_output_path('control.gdb'),layer='control26', driver='OpenFileGDB', promote_to_multi=True)
+    control_areas_year = str(p.settings['control_areas_year'])[-2:]
+    gdf[['control_id','control_name','geometry']].to_file(p.get_output_path('control.gdb'),layer=f'control{control_areas_year}', driver='OpenFileGDB', promote_to_multi=True)
     return context
