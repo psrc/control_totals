@@ -1,5 +1,5 @@
 import pandas as pd
-from util import Pipeline, load_input_tables, calc_gq
+from control_totals.util import Pipeline, load_input_tables, calc_gq
 
 
 def load_king_input_tables(pipeline,targets_type):

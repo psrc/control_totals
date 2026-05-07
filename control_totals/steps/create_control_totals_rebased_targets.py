@@ -39,16 +39,18 @@ def _extract_years(columns, pattern):
 
 
 def _infer_years(city_data):
-	"""Infer the REF base year, base year, and target year from column names.
+	"""Infer the REF base year, base year, target year, and intermediate years.
 
 	Scans for ``Pop##`` (REF base year) and ``TotPop##`` (base and
-	target years) columns in the input city data.
+	target years) columns in the input city data. Any years between the
+	first and last ``TotPop##`` are returned as intermediate anchors.
 
 	Args:
 		city_data (pandas.DataFrame): The raw city-level control totals input.
 
 	Returns:
-		tuple[int, int, int]: ``(ref_base_year, base_year, target_year)``.
+		tuple[int, int, int, list[int]]: ``(ref_base_year, base_year,
+		target_year, intermediate_target_years)``.
 
 	Raises:
 		ValueError: If the required year columns cannot be found.
@@ -59,7 +61,7 @@ def _infer_years(city_data):
 	if not ref_years or len(target_years) < 2:
 		raise ValueError('Unable to infer rebasing years from control totals input columns.')
 
-	return ref_years[0], target_years[0], target_years[-1]
+	return ref_years[0], target_years[0], target_years[-1], target_years[1:-1]
 
 
 def load_city_data(pipeline):
@@ -94,7 +96,7 @@ def load_city_data(pipeline):
 	return pd.read_excel(input_path)
 
 
-def build_rebased_targets(city_data, ref_base_year, base_year, target_year):
+def build_rebased_targets(city_data, ref_base_year, base_year, target_year, intermediate_target_years=None):
 	"""Build rebased growth targets from raw city-level control-totals input.
 
 	Extracts and renames employment and population columns for the REF
@@ -251,6 +253,31 @@ def build_rebased_targets(city_data, ref_base_year, base_year, target_year):
 	city_rgs_pop = city_rgs_pop.rename(columns=pop_rename)
 	city_rgs_emp = city_rgs_emp.rename(columns=emp_rename)
 	city_rgs_hh = city_rgs_hh.rename(columns=hh_rename)
+
+	# Append intermediate-anchor-year columns so interpolation honors them as anchors.
+	# Values are taken directly from the input file (no recomputation from PPH/GQpct).
+	for intermediate_year in (intermediate_target_years or []):
+		short = str(intermediate_year)[-2:]
+		extras = city_data[
+			['control_id', f'TotPop{short}', f'HHpop{short}', f'HH{short}', f'TotEmp{short}_wCRnoMil']
+		].rename(
+			columns={
+				f'TotPop{short}': f'Pop{intermediate_year}',
+				f'HHpop{short}': f'HHPop{intermediate_year}',
+				f'HH{short}': f'HH{intermediate_year}',
+				f'TotEmp{short}_wCRnoMil': f'Emp{intermediate_year}',
+			}
+		)
+		city_rgs_pop = city_rgs_pop.merge(
+			extras[['control_id', f'Pop{intermediate_year}', f'HHPop{intermediate_year}']],
+			on='control_id', how='left',
+		)
+		city_rgs_hh = city_rgs_hh.merge(
+			extras[['control_id', f'HH{intermediate_year}']], on='control_id', how='left',
+		)
+		city_rgs_emp = city_rgs_emp.merge(
+			extras[['control_id', f'Emp{intermediate_year}']], on='control_id', how='left',
+		)
 	rgs_target = rgs_target.rename(
 		columns={
 			'PopDelta': f'Pop{growth_suffix}',
@@ -733,7 +760,7 @@ def _redistribute_block(long, row_indices, totals):
 
 def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, target_year,
 								   round_interpolated=False, stepped_years=None,
-								   scale_start_year=None):
+								   scale_start_year=None, intermediate_target_years=None):
 	"""Interpolate rebased targets into stepped and annual control-totals sheets.
 
 	Produces interpolated control totals at the configured stepped years and
@@ -766,7 +793,7 @@ def build_control_totals_workbooks(outputs, regtot, ref_base_year, base_year, ta
 		dict: A dictionary of DataFrames keyed by indicator name plus
 			``'unrolled'`` and ``'unrolled_regional'`` entries.
 	"""
-	anchors = sorted({ref_base_year, base_year, target_year})
+	anchors = sorted({ref_base_year, base_year, target_year, *(intermediate_target_years or [])})
 	if stepped_years is None:
 		stepped_years = [ref_base_year, *range(base_year, target_year + 1, 5)]
 		if target_year not in stepped_years:
@@ -921,8 +948,11 @@ def run_step(context):
 	cfg = pipeline.settings.get('rebased_targets', {})
 
 	city_data = load_city_data(pipeline)
-	ref_base_year, base_year, target_year = _infer_years(city_data)
-	outputs = build_rebased_targets(city_data, ref_base_year, base_year, target_year)
+	ref_base_year, base_year, target_year, intermediate_target_years = _infer_years(city_data)
+	outputs = build_rebased_targets(
+		city_data, ref_base_year, base_year, target_year,
+		intermediate_target_years=intermediate_target_years,
+	)
 
 	regtot = load_regional_totals(pipeline, base_year)
 	round_interpolated = cfg.get('round_interpolated', False)
@@ -939,6 +969,7 @@ def run_step(context):
 		round_interpolated=round_interpolated,
 		stepped_years=stepped_years,
 		scale_start_year=scale_start_year,
+		intermediate_target_years=intermediate_target_years,
 	)
 
 	output_dir = Path(pipeline.get_output_dir())
