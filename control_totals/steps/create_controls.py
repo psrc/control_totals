@@ -198,7 +198,7 @@ def save_r_scrpt_inputs(pipeline, control_totals_df):
     # calculate additional columns needed for r script
     df[f'TotEmpTrg_wCRnoMil'] = df[f'TotEmp{targets_end_year_2_digits}_wCRnoMil'] - df[f'TotEmp{base_year_2_digits}_wCRnoMil']
     df[f'TotPopTrg'] = df[f'TotPop{targets_end_year_2_digits}'] - df[f'TotPop{base_year_2_digits}']
-    df[f'GQpct{controls_end_year_2_digits}'] = (df[f'GQ{controls_end_year_2_digits}'] / df[f'TotPop{controls_end_year_2_digits}']).fillna(0).replace([float('inf'), -float('inf')], 0)
+    df[f'GQpct{controls_end_year_2_digits}'] = (df[f'GQ{controls_end_year_2_digits}'] / df[f'TotPop{controls_end_year_2_digits}'] * 100).fillna(0).replace([float('inf'), -float('inf')], 0)
     df[f'PPH{controls_end_year_2_digits}'] = (df[f'HHpop{controls_end_year_2_digits}'] / df[f'HH{controls_end_year_2_digits}']).fillna(0).replace([float('inf'), -float('inf')], 0)
     # take last 2 digits of county id
     df['county_id'] = df['county_id'].astype(str).str[-2:].astype(int)
