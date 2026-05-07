@@ -2,6 +2,38 @@ import pandas as pd
 from util import Pipeline, load_input_tables, calc_gq
 
 
+def load_king_input_tables(pipeline,targets_type):
+    # targets type: 'units' or 'total_pop'
+
+    p = pipeline
+    # load control to target lookup
+    control_target_lookup = p.get_table('control_target_xwalk')
+
+    # sum ofm data to target areas
+    base_year = p.settings['base_year']
+    ofm = (
+        p.get_table(f'ofm_parcelized_{base_year}_by_control_area')
+        .merge(control_target_lookup, on='control_id', how='left')
+        .groupby(['target_id','county_id','rgid']).sum().reset_index()
+        .drop(columns=['control_id','name','target_name','control_name','exclude_from_target'], errors='ignore')
+    )
+
+    # merge ofm data with adjusted targets
+    df = (
+        p.get_table(f'adjusted_{targets_type}_change_targets')
+        .merge(ofm, on='target_id', how='left')
+    )
+
+    # calculate household population, households and household size by target area
+    df['ofm_hhpop_by_target'] = df.groupby('target_id')['ofm_hhpop'].transform('sum')
+    df['ofm_hh_by_target'] = df.groupby('target_id')['ofm_hh'].transform('sum')
+    df['ofm_hhsz_by_target'] = df['ofm_hhpop_by_target'] / df['ofm_hh_by_target']
+
+    # calculate hhsz
+    df['ofm_hhsz'] = df['ofm_hhpop'] / df['ofm_hh']
+
+    return df, ofm
+
 def load_hhsz_vacancy_rates(pipeline):
     """Load hard-coded King County household sizes and vacancy rates.
 
@@ -33,11 +65,11 @@ def calc_by_rgid(pipeline, targets_df):
     Args:
         pipeline (Pipeline): The data pipeline providing access to settings.
         targets_df (pandas.DataFrame): Per-target-area DataFrame containing
-            decennial housing units and adjusted unit changes.
+        ofm housing units and adjusted unit changes.
 
     Returns:
         pandas.DataFrame: RGID-level DataFrame with columns for horizon-year
-            units, households, initial and factored household population.
+        units, households, initial and factored household population.
     """
     p = pipeline
     
@@ -59,9 +91,8 @@ def calc_by_rgid(pipeline, targets_df):
     df[hhsz_horizon_col] = df['rgid'].map(king_hhsz)
     df['vacancy_rate'] = df['rgid'].map(king_vac_rates)
 
-
     # calcuate horizon year units
-    df[units_horizon_col] = df['dec_units'] + df['units_chg_adj']
+    df[units_horizon_col] = df['ofm_units'] + df['units_chg_adj']
 
     # calculate horizon year households
     df[hh_horizon_col] = (df[units_horizon_col] * (1 - df['vacancy_rate']/100)).round(0).astype(int)
@@ -122,14 +153,14 @@ def calc_by_target_area(pipeline, df, targets_rgid):
     hhsz_horizon_col = f'hhsz_{targets_end_year}'
     
     #  calculate units for target horizon year
-    df[units_horizon_col] = df['units_chg_adj'] + df['dec_units']
+    df[units_horizon_col] = df['units_chg_adj'] + df['ofm_units']
 
     # calculate households for target horizon year
     df[hh_horizon_col] = (df[units_horizon_col] * (1 - df['vacancy_rate']/100)).round(0).astype(int)
 
     # calculate adjusted hhsz
-    df['dec_hhsz_by_rgid'] = df.groupby('rgid')['dec_hhpop'].transform('sum') / df.groupby('rgid')['dec_hh'].transform('sum')
-    df[hhsz_horizon_col] = df['king_hhsz'] / df['dec_hhsz_by_rgid'] * df['dec_hhsz']
+    df['ofm_hhsz_by_rgid'] = df.groupby('rgid')['ofm_hhpop'].transform('sum') / df.groupby('rgid')['ofm_hh'].transform('sum')
+    df[hhsz_horizon_col] = df['king_hhsz'] / df['ofm_hhsz_by_rgid'] * df['ofm_hhsz']
 
     # if hhsz is greater than 5, use original value
     df.loc[df[hhsz_horizon_col]>5, hhsz_horizon_col] = df.loc[df[hhsz_horizon_col]>5, 'king_hhsz']
@@ -156,7 +187,7 @@ def calc_by_target_area(pipeline, df, targets_rgid):
 
 
 
-def calc_gq_tot_pop(pipeline, df, dec):
+def calc_gq_tot_pop(pipeline, df, ofm):
     """Calculate group-quarters and total population for the target horizon year.
 
     Computes group-quarters population using the regional GQ share, then
@@ -166,7 +197,7 @@ def calc_gq_tot_pop(pipeline, df, dec):
         pipeline (Pipeline): The data pipeline providing access to settings.
         df (pandas.DataFrame): Per-target-area DataFrame with factored
             household population already computed.
-        dec (pandas.DataFrame): Decennial GQ data keyed by ``target_id``.
+        ofm (pandas.DataFrame): OFM GQ data keyed by ``target_id``.
 
     Returns:
         pandas.DataFrame: The input DataFrame with added group-quarters and
@@ -178,7 +209,7 @@ def calc_gq_tot_pop(pipeline, df, dec):
     hhpop_factored_horizon_col = f'hhpop_{targets_end_year}'
 
     # calculate GQ for target areas
-    df = calc_gq(p, df, dec, targets_end_year)
+    df = calc_gq(p, df, ofm, targets_end_year,base_data_source='OFM')
 
     # add GQ to household population to get total population for horizon year
     total_pop_horizon_col = f'total_pop_{targets_end_year}'
@@ -202,13 +233,15 @@ def calculate_targets(pipeline):
     # load target horizon year
     targets_end_year = p.settings['targets_end_year']
     # load input tables
-    df, dec = load_input_tables(p, 'units')
+    df, ofm = load_king_input_tables(p, 'units')
     # filter to king county only
     df = df.loc[df['county_id'] == 53033].copy()
     # perform calculations
     targets_rgid = calc_by_rgid(p, df)
     df = calc_by_target_area(p, df, targets_rgid)
-    df = calc_gq_tot_pop(p, df, dec)
+    df = calc_gq_tot_pop(p, df, ofm)
+    # drop ofm columns
+    df = df.drop(columns=df.filter(regex='^ofm').columns)
     # save table
     p.save_table('adjusted_king_targets',df)
 

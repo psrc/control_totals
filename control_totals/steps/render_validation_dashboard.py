@@ -24,7 +24,7 @@ def _execute_notebooks() -> None:
         subprocess.run(
             [
                 sys.executable,
-                '-m', 'jupyter', 'nbconvert',
+                '-m', 'nbconvert',
                 '--to', 'notebook',
                 '--execute',
                 '--inplace',
