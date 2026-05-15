@@ -119,6 +119,16 @@ split_hct:
   step_values: [1, 0.5, 0.25]           # per-RG iteration step sizes
 
 #----------------------------
+# Subregional control totals settings
+#----------------------------
+subregional_cts:
+  rng_seed: 1234                         # RNG seed for rebalancing sampler
+  max_outer_iterations: 20               # max outer rebalance iterations
+  min_added_break: 10                    # break outer loop when fewer HHs are added
+  save_csv: true                         # write CSV outputs to output_dir
+  borrow_distribution_table: borrow_distribution  # data_tables entry to read
+
+#----------------------------
 # R replacement - Parcels capacity settings
 #----------------------------
 parcels_capacity:
@@ -270,6 +280,9 @@ data_tables:
  - name: control_target_xwalk
    file: control_target_xwalk.csv
 
+ - name: borrow_distribution
+   file: borrow_distribution_2023Apr.csv
+
  - name: regional_geographies_xwalk
    file: regional_geographies_control_id_xwalk.csv
 
@@ -368,7 +381,8 @@ steps:
 
 #  - steps.parcels_capacity # calculates capacities
  - steps.create_control_totals_rebased_targets # creates rebased targets and interpolated control totals in Python
-#  - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
+ - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
  - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
- - steps.calculate_units_for_dashboard # calculates units for dashboard based on hct split control totals and parcel capacity
- - steps.render_validation_dashboard # executes validation notebooks and runs `quarto render`
+ - steps.subregionalCTs # distributes city CTs by PPH and rebalances to controls
+#  - steps.calculate_units_for_dashboard # calculates units for dashboard based on hct split control totals and parcel capacity
+#  - steps.render_validation_dashboard # executes validation notebooks and runs `quarto render`

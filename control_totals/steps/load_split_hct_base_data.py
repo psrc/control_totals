@@ -149,6 +149,121 @@ def get_base_data_table_name(base_year):
 	return f'split_hct_base_data_{int(base_year)}'
 
 
+def get_subreg_pph_table_names(base_year):
+	"""Return the three HDF5 table keys for PPH base-year data.
+
+	Args:
+		base_year (int): The base year.
+
+	Returns:
+		tuple[str, str, str]: Keys for ``hh_by_pph``,
+			``mean_pph_by_subreg``, and ``mean_pph_by_county`` tables.
+	"""
+	by = int(base_year)
+	return (
+		f'subreg_hh_by_pph_{by}',
+		f'subreg_mean_pph_{by}',
+		f'subreg_mean_pph_county_{by}',
+	)
+
+
+def load_pph_base_data_from_mysql(base_db, creds_path,
+								  user_env='URBANSIM_MYSQL_USER',
+								  password_env='URBANSIM_MYSQL_PASSWORD',
+								  host_env='URBANSIM_MYSQL_HOST'):
+	"""Load parcel-level base-year household counts and person sums by PPH bin.
+
+	Queries the parcel base-year database for household counts and total
+	person counts grouped by parcel and capped persons-per-household bin
+	(``CASE WHEN persons > 7 THEN 7 ELSE persons END``). Returns parcel-level
+	data so the caller can aggregate using the current control-area
+	crosswalk (the parcel base-year DB's ``subreg_id``/``county_id_orig``
+	columns are stale).
+
+	Args:
+		base_db (str): MySQL database name (e.g. ``'2023_parcel_baseyear'``).
+		creds_path (pathlib.Path): Path to the credentials file.
+		user_env (str, optional): Env var name for the MySQL username.
+		password_env (str, optional): Env var name for the MySQL password.
+		host_env (str, optional): Env var name for the MySQL host.
+
+	Returns:
+		pandas.DataFrame: Columns ``parcel_id``, ``pph`` (1..7),
+			``household_count``, ``persons_sum``.
+	"""
+	user, password, host = _read_mysql_creds(
+		creds_path, user_env=user_env, password_env=password_env, host_env=host_env
+	)
+	engine = create_engine(
+		f"mysql+pymysql://{quote_plus(user)}:{quote_plus(password)}@{host}/{base_db}"
+	)
+
+	query = """
+		SELECT t2.parcel_id,
+			   (CASE WHEN t1.persons > 7 THEN 7 ELSE t1.persons END) AS pph,
+			   COUNT(t1.household_id) AS household_count,
+			   SUM(t1.persons) AS persons_sum
+		FROM households AS t1
+		JOIN buildings AS t2 ON t1.building_id = t2.building_id
+		GROUP BY t2.parcel_id,
+				 (CASE WHEN t1.persons > 7 THEN 7 ELSE t1.persons END)
+	"""
+	return pd.read_sql_query(query, engine)
+
+
+def aggregate_pph_base_data(p, parcel_pph):
+	"""Aggregate parcel-level PPH data to subreg/county using the current xwalk.
+
+	Mirrors :func:`aggregate_base_data`: joins parcel-level rows to
+	``current_parcel_control_area_xwalk`` to obtain the up-to-date
+	``subreg_id``/``control_id`` for each parcel, then derives ``county_id``
+	from ``control_target_xwalk``. Produces three aggregated frames matching
+	what the legacy R queries returned, but using the current control-area
+	geography.
+
+	Args:
+		p (Pipeline): The data pipeline (used to read crosswalks).
+		parcel_pph (pandas.DataFrame): Output of
+			:func:`load_pph_base_data_from_mysql`.
+
+	Returns:
+		tuple[pandas.DataFrame, pandas.DataFrame, pandas.DataFrame]:
+			``hh_by_pph`` (subreg_id, county_id, pph, household_count),
+			``mean_pph_subreg`` (subreg_id, mean_pph) for the 7+ bin,
+			``mean_pph_county`` (county_id, mean_pph) for the 7+ bin.
+	"""
+	parcels_hct = p.get_table('current_parcel_control_area_xwalk')[['parcel_id', 'subreg_id', 'control_id']]
+	cnty_xwalk = (
+		p.get_table('control_target_xwalk')[['control_id', 'county_id']]
+		.drop_duplicates()
+	)
+
+	merged = (
+		parcels_hct
+		.merge(parcel_pph, on='parcel_id', how='inner')
+		.merge(cnty_xwalk, on='control_id', how='left')
+	)
+
+	hh_by_pph = (
+		merged
+		.groupby(['subreg_id', 'county_id', 'pph'], as_index=False)[['household_count', 'persons_sum']]
+		.sum()
+	)
+
+	bin7 = hh_by_pph[hh_by_pph['pph'] == 7]
+
+	subreg_sums = bin7.groupby('subreg_id', as_index=False)[['household_count', 'persons_sum']].sum()
+	subreg_sums['mean_pph'] = subreg_sums['persons_sum'] / subreg_sums['household_count'].replace(0, np.nan)
+	mean_pph_subreg = subreg_sums[['subreg_id', 'mean_pph']]
+
+	county_sums = bin7.groupby('county_id', as_index=False)[['household_count', 'persons_sum']].sum()
+	county_sums['mean_pph'] = county_sums['persons_sum'] / county_sums['household_count'].replace(0, np.nan)
+	mean_pph_county = county_sums[['county_id', 'mean_pph']]
+
+	hh_by_pph = hh_by_pph.drop(columns=['persons_sum'])
+	return hh_by_pph, mean_pph_subreg, mean_pph_county
+
+
 def _resolve_path(base_path, candidate):
 	"""Resolve a file path that may be relative to a base directory.
 
@@ -205,17 +320,37 @@ def run_step(context):
 	table_name = get_base_data_table_name(base_year)
 
 	if use_mysql:
+		user_env = cfg.get('urbansim_mysql_user', 'URBANSIM_MYSQL_USER')
+		password_env = cfg.get('urbansim_mysql_pass', 'URBANSIM_MYSQL_PASSWORD')
+		host_env = cfg.get('urbansim_mysql_host', 'URBANSIM_MYSQL_HOST')
+
 		base_data = load_base_data_from_mysql(
 			f'{parcel_base_year}_parcel_baseyear',
 			creds_path,
-			user_env=cfg.get('urbansim_mysql_user', 'URBANSIM_MYSQL_USER'),
-			password_env=cfg.get('urbansim_mysql_pass', 'URBANSIM_MYSQL_PASSWORD'),
-			host_env=cfg.get('urbansim_mysql_host', 'URBANSIM_MYSQL_HOST'),
+			user_env=user_env,
+			password_env=password_env,
+			host_env=host_env,
 		)
 		base_data = aggregate_base_data(pipeline, base_data)
 		pipeline.save_table(table_name, base_data)
 		if save_base_data_file:
 			maybe_save_base_data(base_data, base_data_path)
+
+		# Also fetch and aggregate base-year HH-by-PPH data, used by the
+		# downstream subregionalCTs step. Centralizing MySQL access here
+		# means subregionalCTs only needs to read from pipeline.h5.
+		hh_key, mean_subreg_key, mean_county_key = get_subreg_pph_table_names(base_year)
+		parcel_pph = load_pph_base_data_from_mysql(
+			f'{parcel_base_year}_parcel_baseyear',
+			creds_path,
+			user_env=user_env,
+			password_env=password_env,
+			host_env=host_env,
+		)
+		hh_by_pph, mean_pph_subreg, mean_pph_county = aggregate_pph_base_data(pipeline, parcel_pph)
+		pipeline.save_table(hh_key, hh_by_pph)
+		pipeline.save_table(mean_subreg_key, mean_pph_subreg)
+		pipeline.save_table(mean_county_key, mean_pph_county)
 		return context
 
 	if pipeline.check_table_exists(table_name):
