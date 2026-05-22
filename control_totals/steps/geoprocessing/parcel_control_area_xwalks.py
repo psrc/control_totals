@@ -59,8 +59,5 @@ def run_step(context):
     # create crosswalk between ofm year parcels and control areas, then save to h5
     ofm_parcels = create_parcel_control_area_xwalk(parcel_pts_ofm, control_areas)
     p.save_table('ofm_parcel_control_area_xwalk', ofm_parcels)
-    # save current year parcel crosswalk, control_id already spatially joined in hct step
-    if p.check_table_exists('parcels_hct'):
-        current_parcels = p.get_geodataframe('parcels_hct')
-        p.save_table('current_parcel_control_area_xwalk', current_parcels[['parcel_id','subreg_id','control_id']])
+    
     return context
