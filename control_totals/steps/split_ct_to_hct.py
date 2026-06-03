@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from util import Pipeline
+from util import Pipeline, get_mysql_config
 from steps.create_control_totals_rebased_targets import interpolate_controls_with_anchors, unroll_controls
 from steps.load_split_hct_base_data import aggregate_base_data, get_base_data_table_name, load_base_data_from_mysql, maybe_save_base_data
 
@@ -995,7 +995,8 @@ def run_step(context):
 	base_year = int(settings.get('base_year', 2020))
 	base_year_in_targets = int(cfg['base_year_in_targets']) if cfg.get('base_year_in_targets') else base_year
 	target_year = int(settings.get('end_year', 2050))
-	parcel_base_year = int(cfg.get('parcel_base_year', 2018))
+	db = get_mysql_config(pipeline)
+	parcel_base_year = db['parcel_base_year']
 	aggregate_no_growth_areas = bool(cfg.get('aggregate_no_growth_areas', False))
 	round_interpolated = bool(cfg.get('round_interpolated', False))
 	save_results = bool(cfg.get('save_results', True))
@@ -1008,7 +1009,7 @@ def run_step(context):
 	workbook_path = output_dir / cfg.get('controls_file', 'Control-Totals-LUVit.xlsx')
 	capacity_path = output_dir / cfg.get('capacity_file', 'CapacityPclNoSampling_res50.csv')
 	base_data_path = data_dir / cfg.get('base_data_file', f'inputs/base_data_shares_{base_year}.rda')
-	creds_path = data_dir / cfg.get('creds_file', 'creds.txt')
+	creds_path = db['creds_path']
 
 	trgshare_cfg = cfg.get('trgshare', {})
 	trgshare = {'HH': trgshare_cfg.get('HH', 65), 'Emp': trgshare_cfg.get('Emp', 75), 'HHPop': None}
@@ -1028,9 +1029,9 @@ def run_step(context):
 		creds_path=creds_path,
 		legacy_base_data_path=base_data_path,
 		save_legacy_file=bool(cfg.get('save_base_data_file', False)),
-		user_env=cfg.get('urbansim_mysql_user', 'URBANSIM_MYSQL_USER'),
-		password_env=cfg.get('urbansim_mysql_pass', 'URBANSIM_MYSQL_PASSWORD'),
-		host_env=cfg.get('urbansim_mysql_host', 'URBANSIM_MYSQL_HOST'),
+		user_env=db['user_env'],
+		password_env=db['password_env'],
+		host_env=db['host_env'],
 	)
 	
 	# parcels_hct = pipeline.load_geodataframe('parcels_hct')
