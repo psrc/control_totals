@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from util import Pipeline
+from util import ct_allocation
 from steps.load_split_hct_base_data import get_subreg_pph_table_names
 
 
@@ -242,197 +243,23 @@ def apply_borrowed_distribution(ctpop, cts, bdist, base_year, last_year):
 
 
 # ---------------------------------------------------------------------------
-# Larry Blain's formula
+# Larry Blain's formula & rebalancing (shared with regionalCTs via
+# util.ct_allocation; subregional groups by subreg_id and uses the
+# total_hh / total_hhpop control columns).
 # ---------------------------------------------------------------------------
-def hhpop_control(ctpop, cts, op_year, ref_year):
-	"""Apply Larry Blain's two-ratio formula to distribute ``op_year`` HHs.
-
-	Splits PPH bins into ``small`` (pph<3) and ``large`` (pph>=3), then
-	solves for ratios ``r1, r2`` such that the resulting HH count and
-	HH population match the aggregate controls at ``op_year``.
-
-	Args:
-		ctpop (pandas.DataFrame): The CTpop frame.
-		cts (pandas.DataFrame): Aggregate controls (``total_hh``, ``total_hhpop``).
-		op_year (int): Year being updated.
-		ref_year (int): Previous year used as the reference distribution.
-
-	Returns:
-		pandas.DataFrame: ``(subreg_id, pph, household_count)`` updates for ``op_year``.
-	"""
-	ref = ctpop[ctpop['year'] == ref_year].copy()
-	ref['hhsize'] = np.where(ref['pph'] < 3, 'small', 'large')
-	ref['hhpop_row'] = ref['household_count'] * ref['pph']
-	tmp = ref.groupby(['subreg_id', 'hhsize'], as_index=False).agg(
-		hh=('household_count', 'sum'),
-		pop=('hhpop_row', 'sum'),
-	)
-	wide = tmp.pivot(index='subreg_id', columns='hhsize', values=['hh', 'pop']).reset_index()
-	wide.columns = ['subreg_id'] + [f'{a}_{b}' for a, b in wide.columns[1:]]
-	wide = wide.merge(
-		cts[cts['year'] == op_year][['subreg_id', 'total_hh', 'total_hhpop']],
-		on='subreg_id', how='left',
-	)
-	# Larry Blain ratios
-	denom = wide['pop_small'] - wide['hh_small'] * wide['pop_large'] / wide['hh_large']
-	r1 = (wide['total_hhpop'] - wide['total_hh'] * wide['pop_large'] / wide['hh_large']) / denom
-	r2 = (wide['total_hh'] - r1 * wide['hh_small']) / wide['hh_large']
-	wide['r1'] = r1
-	wide['r2'] = r2
-
-	out = ctpop[ctpop['year'] == op_year][['subreg_id', 'pph']].copy()
-	out = out.merge(wide[['subreg_id', 'r1', 'r2']], on='subreg_id', how='left')
-	prev = ref[['subreg_id', 'pph', 'household_count']].rename(columns={'household_count': 'prev_hh'})
-	out = out.merge(prev, on=['subreg_id', 'pph'], how='left')
-
-	is_small = out['pph'] < 3
-	out['household_count'] = np.where(
-		is_small, out['prev_hh'] * out['r1'], out['prev_hh'] * out['r2']
-	)
-	out['household_count'] = np.maximum(1, np.round(out['household_count']))
-	# When ratios couldn't be computed (e.g., total_hh missing for a year), fall back to prev_hh.
-	out['household_count'] = out['household_count'].where(
-		out['household_count'].notna() & np.isfinite(out['household_count']),
-		out['prev_hh'],
-	).astype(float)
-	return out[['subreg_id', 'pph', 'household_count']]
-
-
 def iterate_hhpop_control(ctpop, cts):
-	"""Apply Larry Blain's formula iteratively across sorted years."""
-	years = sorted(ctpop['year'].unique())
-	for i in range(1, len(years)):
-		upd = hhpop_control(ctpop, cts, years[i], years[i - 1])
-		merge = ctpop.merge(
-			upd.rename(columns={'household_count': 'new_hh'}),
-			on=['subreg_id', 'pph'], how='left',
-		)
-		mask = ctpop['year'] == years[i]
-		ctpop.loc[mask, 'household_count'] = merge.loc[mask, 'new_hh'].to_numpy()
-	return ctpop
-
-
-# ---------------------------------------------------------------------------
-# Rebalancing
-# ---------------------------------------------------------------------------
-def rebalance_pop(ctpop, cts):
-	"""Subtract excess HH-population from the pph==7 bin.
-
-	For each (subreg, year) where the aggregated ``hhpop`` exceeds the
-	control's ``total_hhpop``, subtract ``floor(|diff| / mean_pph7)``
-	households from the pph==7 bin (floored at zero). Mirrors R's
-	``rebalance.pop``.
-	"""
-	ctpop['hhpop'] = ctpop['mean_pph'] * ctpop['household_count']
-	aggr = ctpop.groupby(['subreg_id', 'year'], as_index=False).agg(tot=('hhpop', 'sum'))
-	bin7 = ctpop[ctpop['pph'] == 7][['subreg_id', 'year', 'mean_pph']].rename(
-		columns={'mean_pph': 'mean_pph7'}
+	"""Apply Larry Blain's formula iteratively across sorted years (subregional)."""
+	return ct_allocation.iterate_hhpop_control(
+		ctpop, cts, group_keys=['subreg_id'], hh_col='total_hh', hhpop_col='total_hhpop'
 	)
-	aggr = aggr.merge(bin7, on=['subreg_id', 'year'], how='left')
-	aggr = aggr.merge(
-		cts[['subreg_id', 'year', 'total_hhpop']].rename(columns={'total_hhpop': 'should_be'}),
-		on=['subreg_id', 'year'], how='left',
-	)
-	aggr = aggr.dropna(subset=['should_be'])
-	aggr['dif'] = aggr['should_be'] - aggr['tot']
-	difs = aggr[aggr['dif'] < 0]
-
-	# Apply per-row updates
-	for _, row in difs.iterrows():
-		if not np.isfinite(row['mean_pph7']) or row['mean_pph7'] <= 0:
-			continue
-		dhhs7 = int(np.floor(abs(row['dif']) / row['mean_pph7']))
-		if dhhs7 <= 0:
-			continue
-		mask = (
-			(ctpop['subreg_id'] == row['subreg_id'])
-			& (ctpop['year'] == row['year'])
-			& (ctpop['pph'] == 7)
-		)
-		ctpop.loc[mask, 'household_count'] = np.maximum(
-			0.0, ctpop.loc[mask, 'household_count'] - dhhs7
-		)
-	return ctpop
-
-
-def rebalance_hhs(ctpop, cts, rng):
-	"""Adjust HH counts in bins pph∈{1..6} so per-(subreg, year) totals match.
-
-	Sampling-by-weights: for each (subreg, year) with a difference
-	``d = should_be - tot``, sample at most ``min(|d|, k)`` pph bins
-	without replacement (where ``k`` is the number of bins with positive
-	HH count), weighted by current HH count, and shift each sampled bin
-	by ``sign(d)``. Loops until all geographies match. Returns the total
-	households added (i.e., positive net change across all geographies).
-	"""
-	orig = ctpop[['subreg_id', 'year', 'pph', 'household_count']].copy()
-	subset_mask = ctpop['pph'] < 7
-
-	max_loops = 10000  # safety; the algorithm should converge quickly
-	for _ in range(max_loops):
-		aggr = ctpop.groupby(['subreg_id', 'year'], as_index=False).agg(
-			tot=('household_count', 'sum')
-		)
-		aggr = aggr.merge(
-			cts[['subreg_id', 'year', 'total_hh']].rename(columns={'total_hh': 'should_be'}),
-			on=['subreg_id', 'year'], how='left',
-		).dropna(subset=['should_be'])
-		aggr['dif'] = aggr['should_be'] - aggr['tot']
-		difs = aggr[aggr['dif'].abs() > 0]
-		if len(difs) == 0:
-			break
-		for _, row in difs.iterrows():
-			geo_mask = (
-				(ctpop['subreg_id'] == row['subreg_id'])
-				& (ctpop['year'] == row['year'])
-				& subset_mask
-			)
-			sub = ctpop.loc[geo_mask, ['pph', 'household_count']]
-			# Only bins with positive count are eligible for sampling
-			eligible = sub[sub['household_count'] > 0]
-			if eligible.empty:
-				continue
-			size = int(min(abs(row['dif']), len(eligible)))
-			if size <= 0:
-				continue
-			weights = eligible['household_count'].to_numpy(dtype=float)
-			weights = weights / weights.sum()
-			sampled = rng.choice(
-				eligible['pph'].to_numpy(), size=size, replace=False, p=weights
-			)
-			sign = 1 if row['dif'] > 0 else -1
-			apply_mask = geo_mask & ctpop['pph'].isin(sampled)
-			ctpop.loc[apply_mask, 'household_count'] = (
-				ctpop.loc[apply_mask, 'household_count'] + sign
-			).clip(lower=0)
-	# Net added (positive only) across all rows
-	merged = orig.merge(
-		ctpop[['subreg_id', 'year', 'pph', 'household_count']].rename(
-			columns={'household_count': 'new_hh'}
-		),
-		on=['subreg_id', 'year', 'pph'], how='left',
-	)
-	added = merged.loc[merged['new_hh'] > merged['household_count'], 'new_hh'].sum() - merged.loc[
-		merged['new_hh'] > merged['household_count'], 'household_count'
-	].sum()
-	subtracted = merged.loc[merged['new_hh'] < merged['household_count'], 'household_count'].sum() - merged.loc[
-		merged['new_hh'] < merged['household_count'], 'new_hh'
-	].sum()
-	print(f'  Rebalancing HHs: {int(added)} added, {int(subtracted)} subtracted')
-	return int(added)
 
 
 def outer_rebalance(ctpop, cts, rng, max_iterations=20, min_added=10):
-	"""Run the alternating pop/HH rebalance loop until convergence."""
-	for i in range(1, max_iterations + 1):
-		print(f'\nIteration: {i}\n==================')
-		ctpop = rebalance_pop(ctpop, cts)
-		ctpop['hhpop'] = ctpop['mean_pph'] * ctpop['household_count']
-		hhadded = rebalance_hhs(ctpop, cts, rng)
-		ctpop['hhpop'] = ctpop['mean_pph'] * ctpop['household_count']
-		if hhadded < min_added:
-			break
-	return ctpop
+	"""Run the alternating pop/HH rebalance loop until convergence (subregional)."""
+	return ct_allocation.outer_rebalance(
+		ctpop, cts, rng, group_keys=['subreg_id'], hh_col='total_hh', hhpop_col='total_hhpop',
+		max_iterations=max_iterations, min_added=min_added,
+	)
 
 
 # ---------------------------------------------------------------------------

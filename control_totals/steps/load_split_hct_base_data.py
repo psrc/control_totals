@@ -1,58 +1,17 @@
-import os
 from pathlib import Path
-from urllib.parse import quote_plus
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
 
-from util import Pipeline
+from util import Pipeline, get_mysql_engine, get_mysql_config
+from util.db_helpers import DEFAULT_USER_ENV, DEFAULT_PASSWORD_ENV, DEFAULT_HOST_ENV
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 R_SCRIPTS_DIR = PROJECT_ROOT / 'r_scripts'
 
 
-def _read_mysql_creds(creds_path=None, user_env='URBANSIM_MYSQL_USER', password_env='URBANSIM_MYSQL_PASSWORD', host_env='URBANSIM_MYSQL_HOST'):
-	"""Resolve MySQL credentials from environment variables or a credentials file.
-
-	Prefers environment variables (whose names default to ``URBANSIM_MYSQL_USER``,
-	``URBANSIM_MYSQL_PASSWORD``, and ``URBANSIM_MYSQL_HOST`` but can be overridden
-	via settings). Falls back to a plain-text credentials file (three non-empty
-	lines: username, password, host) when one or more env vars are missing and
-	``creds_path`` exists.
-
-	Args:
-		creds_path (pathlib.Path, optional): Path to a fallback credentials file.
-		user_env (str, optional): Env var name for the MySQL username.
-		password_env (str, optional): Env var name for the MySQL password.
-		host_env (str, optional): Env var name for the MySQL host.
-
-	Returns:
-		tuple[str, str, str]: ``(username, password, host)``.
-
-	Raises:
-		ValueError: If credentials cannot be resolved from env vars or file.
-	"""
-	user = os.environ.get(user_env)
-	password = os.environ.get(password_env)
-	host = os.environ.get(host_env)
-	if user and password and host:
-		return user, password, host
-
-	if creds_path is not None and Path(creds_path).exists():
-		lines = [line.strip() for line in Path(creds_path).read_text().splitlines() if line.strip()]
-		if len(lines) < 3:
-			raise ValueError('Expected username, password, and host in creds file')
-		return lines[0], lines[1], lines[2]
-
-	raise ValueError(
-		f'MySQL credentials not found. Set {user_env}, {password_env}, '
-		f'and {host_env} environment variables, or provide a creds file.'
-	)
-
-
-def load_base_data_from_mysql(base_db, creds_path, user_env='URBANSIM_MYSQL_USER', password_env='URBANSIM_MYSQL_PASSWORD', host_env='URBANSIM_MYSQL_HOST'):
+def load_base_data_from_mysql(base_db, creds_path, user_env=DEFAULT_USER_ENV, password_env=DEFAULT_PASSWORD_ENV, host_env=DEFAULT_HOST_ENV):
 	"""Load household, person, and job base data from a MySQL database.
 
 	Queries the base-year MySQL database for household/person and job
@@ -70,9 +29,8 @@ def load_base_data_from_mysql(base_db, creds_path, user_env='URBANSIM_MYSQL_USER
 		pandas.DataFrame: Base data with columns ``parcel_id``,
 			``households``, ``persons``, and ``jobs``.
 	"""
-	user, password, host = _read_mysql_creds(creds_path, user_env=user_env, password_env=password_env, host_env=host_env)
-	engine = create_engine(
-		f"mysql+pymysql://{quote_plus(user)}:{quote_plus(password)}@{host}/{base_db}"
+	engine = get_mysql_engine(
+		base_db, creds_path, user_env=user_env, password_env=password_env, host_env=host_env
 	)
 
 	households_query = f"""
@@ -168,9 +126,9 @@ def get_subreg_pph_table_names(base_year):
 
 
 def load_pph_base_data_from_mysql(base_db, creds_path,
-								  user_env='URBANSIM_MYSQL_USER',
-								  password_env='URBANSIM_MYSQL_PASSWORD',
-								  host_env='URBANSIM_MYSQL_HOST'):
+								  user_env=DEFAULT_USER_ENV,
+								  password_env=DEFAULT_PASSWORD_ENV,
+								  host_env=DEFAULT_HOST_ENV):
 	"""Load parcel-level base-year household counts and person sums by PPH bin.
 
 	Queries the parcel base-year database for household counts and total
@@ -191,11 +149,8 @@ def load_pph_base_data_from_mysql(base_db, creds_path,
 		pandas.DataFrame: Columns ``parcel_id``, ``pph`` (1..7),
 			``household_count``, ``persons_sum``.
 	"""
-	user, password, host = _read_mysql_creds(
-		creds_path, user_env=user_env, password_env=password_env, host_env=host_env
-	)
-	engine = create_engine(
-		f"mysql+pymysql://{quote_plus(user)}:{quote_plus(password)}@{host}/{base_db}"
+	engine = get_mysql_engine(
+		base_db, creds_path, user_env=user_env, password_env=password_env, host_env=host_env
 	)
 
 	query = """
@@ -312,20 +267,21 @@ def run_step(context):
 	cfg = pipeline.settings.get('split_hct', {})
 
 	data_dir = Path(pipeline.get_data_dir())
-	parcel_base_year = int(cfg.get('parcel_base_year', 2018))
-	creds_path = data_dir / cfg.get('creds_file', 'creds.txt')
+	db = get_mysql_config(pipeline)
+	creds_path = db['creds_path']
 	base_data_path = data_dir / cfg.get('base_data_file', f'inputs/base_data_shares_{base_year}.rda')
 	use_mysql = bool(cfg.get('use_mysql', False))
 	save_base_data_file = bool(cfg.get('save_base_data_file', False))
 	table_name = get_base_data_table_name(base_year)
 
 	if use_mysql:
-		user_env = cfg.get('urbansim_mysql_user', 'URBANSIM_MYSQL_USER')
-		password_env = cfg.get('urbansim_mysql_pass', 'URBANSIM_MYSQL_PASSWORD')
-		host_env = cfg.get('urbansim_mysql_host', 'URBANSIM_MYSQL_HOST')
+		base_db = db['database']
+		user_env = db['user_env']
+		password_env = db['password_env']
+		host_env = db['host_env']
 
 		base_data = load_base_data_from_mysql(
-			f'{parcel_base_year}_parcel_baseyear',
+			base_db,
 			creds_path,
 			user_env=user_env,
 			password_env=password_env,
@@ -341,7 +297,7 @@ def run_step(context):
 		# means subregionalCTs only needs to read from pipeline.h5.
 		hh_key, mean_subreg_key, mean_county_key = get_subreg_pph_table_names(base_year)
 		parcel_pph = load_pph_base_data_from_mysql(
-			f'{parcel_base_year}_parcel_baseyear',
+			base_db,
 			creds_path,
 			user_env=user_env,
 			password_env=password_env,

@@ -94,22 +94,31 @@ rebased_targets:
   output_controls_file: Control-Totals-LUVit.xlsx  # interpolated control totals workbook filename (in output_dir)
 
 #----------------------------
+# UrbanSim MySQL settings (shared by all steps that read the parcel base-year
+# database: split_hct, regionalCTs, and the base-data loader)
+#----------------------------
+urbansim_mysql:
+  parcel_base_year: 2023                 # MySQL parcel base-year database year
+  creds_file: creds.txt                  # fallback MySQL credentials file (in data_dir)
+  user_env: URBANSIM_MYSQL_USER          # env var holding the MySQL username
+  password_env: URBANSIM_MYSQL_PASSWORD  # env var holding the MySQL password
+  host_env: URBANSIM_MYSQL_HOST          # env var holding the MySQL host
+
+#----------------------------
 # HCT split settings
 #----------------------------
 split_hct:
   base_year_in_targets: null             # defaults to general base_year
-  parcel_base_year: 2023                 # MySQL parcel database year
   controls_file: Control-Totals-LUVit.xlsx  # input control totals workbook (in output_dir, from rebased_targets step)
   capacity_file: CapacityPclNoSampling_res50.csv  # parcel capacity CSV (in output_dir)
   base_data_file: inputs/base_data_shares_2023.rda  # base data file (in data_dir)
-  creds_file: creds.txt                  # MySQL credentials file (in data_dir)
   use_mysql: true                        # fetch base data from MySQL instead of file/pipeline
   save_base_data_file: false             # persist MySQL-fetched base data to file
   aggregate_no_growth_areas: false       # collapse no-growth geographies before splitting
   round_interpolated: false              # round interpolated values to integers
   save_results: true                     # write Excel output workbooks
   max_iterations: 2000                   # max scaling iterations per indicator
-  stepped_years: null                    # years for stepped output; null = auto from base_year
+  stepped_years: [2023, 2025, 2030, 2035, 2040, 2044, 2050]                   # years for stepped output; null = auto from base_year
   trgshare:                              # regional TOD share targets by indicator (%)
     HH: 65
     Emp: 75
@@ -127,6 +136,23 @@ subregional_cts:
   min_added_break: 10                    # break outer loop when fewer HHs are added
   save_csv: true                         # write CSV outputs to output_dir
   borrow_distribution_table: borrow_distribution  # data_tables entry to read
+
+#----------------------------
+# Regional control totals settings
+#----------------------------
+regional_cts:
+  rng_seed: 1234                         # RNG seed for rebalancing sampler
+  max_outer_iterations: 20               # max outer rebalance iterations
+  min_added_break: 10                    # break outer loop when fewer HHs are added
+  save_csv: true                         # write CSV output to output_dir
+  forecast_table: split_ct_unrolled_regional         # regional forecast table in pipeline.h5
+  output_table: annual_household_control_totals_region  # output table name
+  income_bins: [0, 56000, 106000, 180000]  # lower income bound (inclusive) of each bracket
+  income_labels:                         # label for each bracket (must match income_bins length)
+    - "Under $56,000"
+    - "$56,000-$105,999"
+    - "$106,000-$179,999"
+    - "$180,000 or more"
 
 #----------------------------
 # R replacement - Parcels capacity settings
@@ -368,11 +394,12 @@ steps:
 #  - steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
  - steps.geoprocessing.parcel_control_hct_xwalk # creates parcel to control_hct crosswalk
 #  - steps.data_loading.load_data # loads data from csv files into hdf5
+ - steps.data_loading.load_data # loads data from csv files into hdf5
 #  - steps.geoprocessing.create_control_area_geography # creates control area geography by unioning and dissolving regional geographies, military bases, tribal areas, and natural resource areas together
 #  - steps.geoprocessing.flag_hct_parcels # creates hct buffers around transit points and flags parcels that fall within those buffers
 #  - steps.geoprocessing.save_hct_shp # saves control_hct to GDB in /output for uploading to ElmerGeo
 #  - steps.geoprocessing.block_control_area_xwalk # creates block to control area crosswalk
-#  - steps.geoprocessing.parcel_control_area_xwalks # creates parcel to control area crosswalk
+ - steps.geoprocessing.parcel_control_area_xwalks # creates parcel to control area crosswalk
 #  - steps.data_loading.get_census_data # pulls decennial census data from api and saves to hdf5
 #  - steps.data_loading.prepare_parcel_data # aggregates parcel data to control area
 #  - steps.data_loading.prepare_block_data # aggregates decennial block data to control area
@@ -391,5 +418,6 @@ steps:
 #  - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
 #  - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
 #  - steps.subregionalCTs # distributes city CTs by PPH and rebalances to controls
+
 #  - steps.calculate_units_for_dashboard # calculates units for dashboard based on hct split control totals and parcel capacity
 #  - steps.render_validation_dashboard # executes validation notebooks and runs `quarto render`
