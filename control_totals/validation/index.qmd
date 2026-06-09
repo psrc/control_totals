@@ -1,9 +1,6 @@
 ---
 title: "Control Totals Validation"
 date: today
-jupyter: python3
-execute:
-  enabled: true
 ---
 
 This dashboard summarizes and validates the output of the
@@ -34,38 +31,17 @@ recomputed from the summed numerator and denominator (not averaged).
 
 ## Forecasts in this dashboard
 
-The forecasts below are read directly from `config.yaml`, in the order
-they appear there (the first entry is the default tab in each chapter).
+| Forecast | Targets vintage | REMI scaling | Notes |
+|---|---|---|---|
+| **Growth Targets Scaled to REMI by County 2060** | 2026 targets | Scaled to REMI v3.3 by county | Pipeline run |
+| **Growth Targets Scaled to REMI 2060** | 2026 targets | Scaled to REMI v3.3 | Pipeline run |
+| **Growth Targets Unscaled 2060** | 2026 targets | Not scaled | Pipeline run |
+| **Growth Targets Unscaled 2050 (Summer 2026)** | 2026 targets | Not scaled | Pipeline run |
+| **Legacy LUVit (RTP26)** | 2021 targets | Not scaled | Legacy Control-Totals spreadsheet (RTP26, 2025-06-11) |
 
-```{python}
-#| echo: false
-#| output: asis
-from pathlib import Path
-import yaml
-
-_candidates = [Path("config.yaml"), Path("validation/config.yaml"),
-               Path(__file__).resolve().parent / "config.yaml"
-               if "__file__" in globals() else Path("config.yaml")]
-_cfg_path = next((p for p in _candidates if p.exists()), Path("config.yaml"))
-_forecasts = (yaml.safe_load(_cfg_path.read_text()) or {}).get("forecasts", [])
-
-_rows = ["| Forecast | Targets vintage | REMI scaling | Notes |",
-         "|---|---|---|---|"]
-for _f in _forecasts:
-    _name = _f.get("name", "")
-    _vintage = _f.get("targets_vintage", "")
-    _remi = _f.get("remi_scaling", "")
-    _notes = _f.get("notes") or (
-        "Legacy Control-Totals spreadsheet"
-        if _f.get("type") == "spreadsheet" else "Pipeline run")
-    _rows.append(f"| **{_name}** | {_vintage} | {_remi} | {_notes} |")
-print("\n".join(_rows))
-```
-
-The **Targets vintage**, **REMI scaling**, and **Notes** columns come from
-the optional descriptive fields of the same name in `config.yaml`. Edit
-`config.yaml` to change any forecast's name or description; this table
-updates on the next render.
+This table mirrors the forecasts listed in `config.yaml`. Keep the two
+in sync: if you rename a forecast or change its order in `config.yaml`,
+update this table to match.
 
 ## Pointing the dashboard at runs
 
@@ -80,9 +56,6 @@ forecasts:
   - name: Growth Targets Scaled to REMI 2060
     path: ../../examples/vision_2060_scaled
     type: pipeline
-    targets_vintage: 2026 targets
-    remi_scaling: Scaled to REMI v3.3
-    notes: Pipeline run
 
   - name: Growth Targets Unscaled 2060
     path: ../../examples/vision_2060
@@ -99,11 +72,6 @@ forecasts:
     targets_end_year: 2044
     end_year: 2050
 ```
-
-The `name`, and the optional `targets_vintage`, `remi_scaling`, and
-`notes` fields, feed the **Forecasts in this dashboard** table above —
-so forecast names live in `config.yaml` only and are never duplicated
-in this page.
 
 Paths are relative to the `validation/` folder. Edit `config.yaml`,
 re-execute the notebooks, then re-render the book.
