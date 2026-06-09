@@ -8,23 +8,39 @@
 #   - type: pipeline    -> reads rebased_control_totals_* from data/pipeline.h5
 #   - type: spreadsheet -> reads HH/HHPop/Pop sheets from a Control-Totals workbook;
 #                          requires xwalk_path + base_year/targets_end_year/end_year
+#
+# The optional `targets_vintage`, `remi_scaling`, and `notes` fields are
+# purely descriptive: they populate the "Forecasts in this dashboard"
+# table on the dashboard's index page and are ignored by the data loader.
 forecasts:
 
-  - name: Vision 2060 Scaled by County
+  - name: Growth Targets Scaled to REMI by County 2060
     path: ../../examples/vision_2060_scaled_cnty
     type: pipeline
+    targets_vintage: 2026 targets
+    remi_scaling: Scaled to REMI v3.3 by county
+    notes: Pipeline run
 
-  - name: Vision 2060 Scaled
+  - name: Growth Targets Scaled to REMI 2060
     path: ../../examples/vision_2060_scaled
     type: pipeline
+    targets_vintage: 2026 targets
+    remi_scaling: Scaled to REMI v3.3
+    notes: Pipeline run
 
-  - name: Vision 2060
+  - name: Growth Targets Unscaled 2060
     path: ../../examples/vision_2060
     type: pipeline
+    targets_vintage: 2026 targets
+    remi_scaling: Not scaled
+    notes: Pipeline run
 
-  - name: Summer 2026
+  - name: Growth Targets Unscaled 2050 (Summer 2026)
     path: ../../examples/summer_2026
     type: pipeline
+    targets_vintage: 2026 targets
+    remi_scaling: Not scaled
+    notes: Pipeline run
 
   - name: Legacy LUVit (RTP26)
     path: ../../examples/legacy_luvit_spreadsheet
@@ -34,3 +50,6 @@ forecasts:
     base_year: 2020
     targets_end_year: 2044
     end_year: 2050
+    targets_vintage: 2021 targets
+    remi_scaling: Not scaled
+    notes: Legacy Control-Totals spreadsheet (RTP26, 2025-06-11)
