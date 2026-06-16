@@ -211,3 +211,4 @@ control_totals/validation/validation-dashboard/
 control_totals/validation/.quarto/
 control_totals/validation/_freeze/
 
+examples/legacy_luvit/data/extrapolated_targets2021.csv

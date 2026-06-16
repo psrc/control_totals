@@ -128,7 +128,7 @@ split_hct:
   step_values: [1, 0.5, 0.25]           # per-RG iteration step sizes
 
 #----------------------------
-# Subregional control totals settings
+# Subregional control totals settings (SubregionalCTs step)
 #----------------------------
 subregional_cts:
   rng_seed: 1234                         # RNG seed for rebalancing sampler
@@ -138,7 +138,7 @@ subregional_cts:
   borrow_distribution_table: borrow_distribution  # data_tables entry to read
 
 #----------------------------
-# Regional control totals settings
+# Regional control totals settings (Regional_CTs step)
 #----------------------------
 regional_cts:
   rng_seed: 1234                         # RNG seed for rebalancing sampler
@@ -155,8 +155,10 @@ regional_cts:
     - "$180,000 or more"
   create_emp_totals: true               # if true, also build employment control totals
   scale_emp_controls: true               # if true, scale source totals to forecast job_count; else copy
-  emp_ct_table: "psrc_2014_parcel_baseyear_just_friends.annual_employment_control_totals_lum_sector"  # source emp CT table (MySQL, may be fully qualified)
+  emp_ct_table: 2023_parcel_baseyear.annual_employment_control_totals  # source emp CT table (MySQL, may be fully qualified)
   emp_output_table: annual_employment_control_totals_region  # employment output table name
+  save_to_mysql: true                      # if true, write regional CTs to MySQL; else save to pipeline.h5 only
+  mysql_db: sandbox_james                      # MySQL database for writing output tables if save_to_mysql is true
 
 #----------------------------
 # R replacement - Parcels capacity settings

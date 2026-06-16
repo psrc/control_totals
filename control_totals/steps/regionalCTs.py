@@ -318,6 +318,18 @@ def build_emp_output(emp, forecast, base_year, scale_emp_controls=True):
 
 	return df.reset_index(drop=True)
 
+# for optional saving of control totals to MySQL
+def _get_urbansim_mysql_creds(pipeline):
+	"""Read urbansim_mysql credentials from settings, falling back to defaults."""
+	cfg = pipeline.settings.get('urbansim_mysql', {}) or {}
+	data_dir = Path(pipeline.get_data_dir())
+	creds_path = data_dir / cfg.get('creds_file', 'creds.txt')
+	return {
+		'creds_path': creds_path,
+		'user_env': cfg.get('user_env', DEFAULT_USER_ENV),
+		'password_env': cfg.get('password_env', DEFAULT_PASSWORD_ENV),
+		'host_env': cfg.get('host_env', DEFAULT_HOST_ENV),
+	}
 
 # ---------------------------------------------------------------------------
 # Step entry point
@@ -423,4 +435,30 @@ def run_step(context):
 			res_emp.to_csv(emp_csv_path, index=False)
 			print(f'Wrote CSV output to {emp_csv_path}')
 
+	save_to_mysql = bool(cfg.get('save_to_mysql', False))
+	if save_to_mysql:
+		mysql_db = cfg.get('mysql_db')
+		if not mysql_db:
+			raise ValueError('regional_cts.mysql_db must be set when save_to_mysql is true')
+		mysql_creds = _get_urbansim_mysql_creds(pipeline)
+		mysql_engine = get_mysql_engine(
+			mysql_db,
+			creds_path=mysql_creds['creds_path'],
+			user_env=mysql_creds['user_env'],
+			password_env=mysql_creds['password_env'],
+			host_env=mysql_creds['host_env'],
+		)
+		mysql_tables = cfg.get('mysql_tables', {
+			'emp': 'annual_employment_control_totals',
+			'hh': 'annual_household_control_totals',
+		})
+		if create_emp_totals:
+			res_emp.to_sql(mysql_tables['emp'], mysql_engine, if_exists='append', index=False)
+			print(f'Wrote {len(res_emp)} rows to {mysql_db}.{mysql_tables["emp"]}')
+		res_hh.to_sql(mysql_tables['hh'], mysql_engine, if_exists='append', index=False)
+		print(f'Wrote {len(res_hh)} rows to {mysql_db}.{mysql_tables["hh"]}')
+
 	return context
+
+
+
