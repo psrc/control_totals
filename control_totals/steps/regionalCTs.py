@@ -27,6 +27,7 @@ Note: the rebalancing step uses weighted random sampling with a fixed seed.
 Results are reproducible run-to-run in Python but are NOT bit-for-bit identical
 to the R script, because NumPy and R use different RNG algorithms.
 """
+from iteround import saferound
 from pathlib import Path
 
 import numpy as np
@@ -249,87 +250,83 @@ def build_hh_output(ctpop, base_year, income_bins, income_labels):
 # ---------------------------------------------------------------------------
 # Employment control totals (R block "if(create.emp.totals)")
 # ---------------------------------------------------------------------------
-def load_emp_control_totals(emp_ct_table, base_db, creds_path=None,
-							user_env=DEFAULT_USER_ENV,
-							password_env=DEFAULT_PASSWORD_ENV,
-							host_env=DEFAULT_HOST_ENV):
-	"""Load the base employment control totals table from MySQL.
+def build_emp_output(emp_ct_table, forecast, base_year, base_db, creds_path,
+                      user_env, password_env, host_env, scale_emp_controls=True):
+    """Build regional Emp UrbanSim CT rows with sector distributions.
 
-	Reproduces the R ``select * from <emp.ct.table>`` query, dropping the
-	``city_id`` column when present. ``emp_ct_table`` may be fully qualified
-	(``database.table``); the engine connects to ``base_db`` and MySQL resolves
-	the cross-database reference, matching the R behaviour.
+    Loads sector_id and home_based_status distributions from the source employment
+    control totals table and applies them to the regional forecast.
 
-	Args:
-		emp_ct_table (str): Source employment CT table, optionally fully
-			qualified (e.g.
-			``'psrc_2014_parcel_baseyear_just_friends.annual_employment_control_totals_lum_sector'``).
-		base_db (str): Database the engine connects to.
-		creds_path (pathlib.Path, optional): Fallback credentials file.
-		user_env, password_env, host_env (str): Env var names for credentials.
+    Args:
+        emp_ct_table (str): Source employment CT table in MySQL.
+        forecast (pandas.DataFrame): Regional forecast with year and job_count.
+        base_year (int): Base year; only rows with ``year > base_year`` are used.
+        base_db (str): MySQL database name.
+        creds_path (pathlib.Path): Path to credentials file.
+        user_env, password_env, host_env (str): Env var names for MySQL credentials.
+        scale_emp_controls (bool): If true, scale source totals to match forecast.
 
-	Returns:
-		pandas.DataFrame: The employment CT table, without ``city_id``.
-	"""
-	engine = get_mysql_engine(
-		base_db, creds_path, user_env=user_env, password_env=password_env, host_env=host_env
-	)
-	emp = pd.read_sql_query(f'SELECT * FROM {emp_ct_table}', engine)
-	if 'city_id' in emp.columns:
-		emp = emp.drop(columns=['city_id'])
-	return emp
+    Returns:
+        pandas.DataFrame: Regional employment CT rows with sector breakdowns.
+    """
+    base_year = int(base_year)
 
+    # Load source employment control totals to get sector/home_based distributions
+    engine = get_mysql_engine(
+        base_db, creds_path, user_env=user_env, password_env=password_env, host_env=host_env
+    )
+    emp_src = pd.read_sql_query(f'SELECT * FROM {emp_ct_table}', engine)
+    if 'city_id' in emp_src.columns:
+        emp_src = emp_src.drop(columns=['city_id'])
 
-def build_emp_output(emp, forecast, base_year, scale_emp_controls=True):
-	"""Filter (and optionally scale) employment control totals to the forecast.
+    # Get source proportions by (sector_id, home_based_status) for years > base_year
+    emp_src['year'] = emp_src['year'].astype(int)
+    emp_src = emp_src[emp_src['year'] > base_year]
 
-	Mirrors the R ``create.emp.totals`` block: keeps ``year > base_year`` and,
-	when ``scale_emp_controls`` is true, rescales each year's
-	``total_number_of_jobs`` proportionally so that the per-year total matches
-	the forecast ``job_count``.
+    # Filter out placeholder rows (sector_id=-1, home_based_status=-1) used as
+    # step-year fallbacks in subregionalCTs; regional should only use disaggregated rows.
+    emp_src = emp_src[(emp_src['sector_id'] != -1) & (emp_src['home_based_status'] != -1)]
 
-	Args:
-		emp (pandas.DataFrame): Base employment CT table (must contain ``year``
-			and ``total_number_of_jobs``).
-		forecast (pandas.DataFrame): Regional forecast with ``year`` and
-			``job_count`` (only required when scaling).
-		base_year (int): Base year; only rows with ``year > base_year`` are kept.
-		scale_emp_controls (bool): If true, scale to the forecast ``job_count``;
-			otherwise the source totals are copied through.
+    if scale_emp_controls:
+        # Compute shares by sector/home_based per year from source
+        emp_src['share'] = (
+            emp_src['total_number_of_jobs'] /
+            emp_src.groupby('year')['total_number_of_jobs'].transform('sum')
+        )
+    else:
+        emp_src['share'] = emp_src['total_number_of_jobs']
 
-	Returns:
-		pandas.DataFrame: Employment CT rows with an integer
-			``total_number_of_jobs`` column.
-	"""
-	base_year = int(base_year)
-	df = emp[emp['year'].astype(int) > base_year].copy()
-	df['year'] = df['year'].astype(int)
+    # Build result for each year in forecast
+    forecast_years = forecast[forecast['year'].astype(int) > base_year][['year', 'job_count']].copy()
+    forecast_years['year'] = forecast_years['year'].astype(int)
 
-	if scale_emp_controls:
-		if 'job_count' not in forecast.columns:
-			raise KeyError('forecast must contain a job_count column to scale employment controls')
-		df['share'] = df['total_number_of_jobs'] / df.groupby('year')['total_number_of_jobs'].transform('sum')
-		forecast_total = forecast.set_index('year')['job_count']
-		df['forecast_total'] = df['year'].map(forecast_total)
-		df['total_number_of_jobs'] = (df['forecast_total'] * df['share']).round().astype(int)
-		df = df.drop(columns=['share', 'forecast_total'])
-	else:
-		df['total_number_of_jobs'] = df['total_number_of_jobs'].round().astype(int)
+    # Cross-join with source sector/home_based combinations
+    shares = emp_src[['year', 'sector_id', 'home_based_status', 'share']].copy()
+    result = forecast_years.merge(shares, on='year', how='left')
 
-	return df.reset_index(drop=True)
+    # Fill missing shares with uniform distribution
+    result['share'] = result['share'].fillna(result.groupby('year')['share'].transform('sum').pipe(
+        lambda x: 1.0 / x.where(x > 0, 1)
+    ))
 
-# for optional saving of control totals to MySQL
-def _get_urbansim_mysql_creds(pipeline):
-	"""Read urbansim_mysql credentials from settings, falling back to defaults."""
-	cfg = pipeline.settings.get('urbansim_mysql', {}) or {}
-	data_dir = Path(pipeline.get_data_dir())
-	creds_path = data_dir / cfg.get('creds_file', 'creds.txt')
-	return {
-		'creds_path': creds_path,
-		'user_env': cfg.get('user_env', DEFAULT_USER_ENV),
-		'password_env': cfg.get('password_env', DEFAULT_PASSWORD_ENV),
-		'host_env': cfg.get('host_env', DEFAULT_HOST_ENV),
-	}
+    if scale_emp_controls:
+        # Use saferound to allocate job_count across shares, avoiding rounding drift
+        result['total_number_of_jobs'] = 0.0  # Initialize as float
+
+        for _, grp in result.groupby('year', sort=False):
+            total_jobs = int(grp['job_count'].iloc[0])
+            floats = (grp['job_count'] * grp['share']).tolist()
+            rounded = saferound(floats, places=0, topline=total_jobs)
+            result.loc[grp.index, 'total_number_of_jobs'] = rounded
+
+        result['total_number_of_jobs'] = result['total_number_of_jobs'].astype(int)
+    else:
+        result['total_number_of_jobs'] = result['share'].round().astype(int)
+
+    # Return with year as int, drop intermediate columns
+    result['year'] = result['year'].astype(int)
+    return result[['year', 'sector_id', 'home_based_status', 'total_number_of_jobs']].reset_index(drop=True)
+
 
 # ---------------------------------------------------------------------------
 # Step entry point
@@ -418,11 +415,10 @@ def run_step(context):
 
 	if create_emp_totals:
 		print('Building employment control totals...')
-		emp = load_emp_control_totals(
-			emp_ct_table, base_db, creds_path=creds_path,
-			user_env=user_env, password_env=password_env, host_env=host_env,
+		res_emp = build_emp_output(
+			emp_ct_table, forecast, base_year, base_db, creds_path,
+			user_env, password_env, host_env, scale_emp_controls=scale_emp_controls
 		)
-		res_emp = build_emp_output(emp, forecast, base_year, scale_emp_controls=scale_emp_controls)
 		if end_year is not None:
 			res_emp = res_emp[res_emp['year'] <= end_year].reset_index(drop=True)
 
@@ -434,29 +430,6 @@ def run_step(context):
 			emp_csv_path = out_dir / f'{emp_output_table}.csv'
 			res_emp.to_csv(emp_csv_path, index=False)
 			print(f'Wrote CSV output to {emp_csv_path}')
-
-	save_to_mysql = bool(cfg.get('save_to_mysql', False))
-	if save_to_mysql:
-		mysql_db = cfg.get('mysql_db')
-		if not mysql_db:
-			raise ValueError('regional_cts.mysql_db must be set when save_to_mysql is true')
-		mysql_creds = _get_urbansim_mysql_creds(pipeline)
-		mysql_engine = get_mysql_engine(
-			mysql_db,
-			creds_path=mysql_creds['creds_path'],
-			user_env=mysql_creds['user_env'],
-			password_env=mysql_creds['password_env'],
-			host_env=mysql_creds['host_env'],
-		)
-		mysql_tables = cfg.get('mysql_tables', {
-			'emp': 'annual_employment_control_totals',
-			'hh': 'annual_household_control_totals',
-		})
-		if create_emp_totals:
-			res_emp.to_sql(mysql_tables['emp'], mysql_engine, if_exists='append', index=False)
-			print(f'Wrote {len(res_emp)} rows to {mysql_db}.{mysql_tables["emp"]}')
-		res_hh.to_sql(mysql_tables['hh'], mysql_engine, if_exists='append', index=False)
-		print(f'Wrote {len(res_hh)} rows to {mysql_db}.{mysql_tables["hh"]}')
 
 	return context
 

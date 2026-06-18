@@ -7,12 +7,13 @@ controls, and writes the final ``annual_household_control_totals`` and
 ``annual_employment_control_totals`` tables (with both subregional rows
 and ``subreg_id == -1`` regional rows) to the pipeline HDF5 store.
 """
+from iteround import saferound
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from util import Pipeline
+from util import Pipeline, get_mysql_engine, get_mysql_config
 from util import ct_allocation
 from steps.load_split_hct_base_data import get_subreg_pph_table_names
 
@@ -287,13 +288,34 @@ def build_hh_output(ctpop, base_year):
 	return df[HH_COLS].reset_index(drop=True)
 
 
-def build_emp_output(cts):
-	"""Build the subregional Emp UrbanSim CT rows from `split_ct_unrolled`."""
-	df = cts[['subreg_id', 'year', 'total_emp']].copy()
-	df['total_number_of_jobs'] = df['total_emp'].round().astype(int)
-	df['home_based_status'] = -1
-	df['sector_id'] = -1
-	return df[EMP_COLS].reset_index(drop=True)
+def build_emp_output(cts, base_year):
+    """Build the subregional Emp UrbanSim CT rows with simplified sector encoding.
+
+    Creates one row per (subreg_id, year) with sector_id=-1 and
+    home_based_status=-1 containing the total employment.
+
+    Args:
+        cts (pandas.DataFrame): Subregional control totals with subreg_id, year,
+            and total_emp.
+        base_year (int): Base year; only rows with ``year > base_year`` are used.
+
+    Returns:
+        pandas.DataFrame: Subregional employment CT rows with simplified
+            sector_id=-1, home_based_status=-1 encoding.
+    """
+    base_year = int(base_year)
+
+    # Get subreg/year combos for all years > base_year
+    subreg_years = cts[(cts['year'].astype(int) > base_year)][['subreg_id', 'year', 'total_emp']].copy()
+    subreg_years['year'] = subreg_years['year'].astype(int)
+
+    # Simple rows with sector_id=-1, home_based_status=-1
+    result = subreg_years.copy()
+    result['total_number_of_jobs'] = result['total_emp'].round().astype(int)
+    result['sector_id'] = -1
+    result['home_based_status'] = -1
+
+    return result[EMP_COLS].reset_index(drop=True)
 
 
 def build_regional_hh_rows(regional, sub_years):
@@ -310,14 +332,32 @@ def build_regional_hh_rows(regional, sub_years):
 	return df[HH_COLS].reset_index(drop=True)
 
 
-def build_regional_emp_rows(regional, sub_years):
-	"""Build regional Emp rows for years NOT covered by the subregional output."""
-	df = regional[~regional['year'].isin(sub_years)].copy()
-	df['total_number_of_jobs'] = df['total_emp'].round().astype(int)
-	df['subreg_id'] = -1
-	df['home_based_status'] = -1
-	df['sector_id'] = -1
-	return df[EMP_COLS].reset_index(drop=True)
+def build_regional_emp_rows(regional, sub_years, base_year):
+    """Build regional Emp rows for years NOT covered by the subregional output.
+
+    Creates rows with sector_id=-1 and home_based_status=-1 for each year
+    not already covered by the subregional output.
+
+    Args:
+        regional (pandas.DataFrame): Regional control totals.
+        sub_years (set): Years already covered by subregional output.
+        base_year (int): Base year; only rows with ``year > base_year`` are used.
+
+    Returns:
+        pandas.DataFrame: Regional employment CT rows with simplified encoding.
+    """
+    base_year = int(base_year)
+    df = regional[~regional['year'].isin(sub_years)].copy()
+    df = df[df['year'].astype(int) > base_year].copy()
+    df['year'] = df['year'].astype(int)
+
+    # Simple rows with sector_id=-1, home_based_status=-1
+    df['total_number_of_jobs'] = df['total_emp'].round().astype(int)
+    df['sector_id'] = -1
+    df['home_based_status'] = -1
+    df['subreg_id'] = -1
+
+    return df[EMP_COLS].reset_index(drop=True)
 
 
 # ---------------------------------------------------------------------------
@@ -370,6 +410,9 @@ def run_step(context):
 	save_csv = bool(cfg.get('save_csv', True))
 	borrow_table = cfg.get('borrow_distribution_table', 'borrow_distribution')
 
+	# Employment configuration
+	create_emp_totals = bool(cfg.get('create_emp_totals', True))
+
 	rng = np.random.default_rng(rng_seed)
 
 	print('Loading inputs...')
@@ -398,11 +441,11 @@ def run_step(context):
 
 	print('Building output tables...')
 	sub_hh = build_hh_output(ctpop, base_year)
-	sub_emp = build_emp_output(cts)
+	sub_emp = build_emp_output(cts, base_year)
 	sub_hh_years = set(sub_hh['year'].unique())
 	sub_emp_years = set(sub_emp['year'].unique())
 	reg_hh = build_regional_hh_rows(regional, sub_hh_years)
-	reg_emp = build_regional_emp_rows(regional, sub_emp_years)
+	reg_emp = build_regional_emp_rows(regional, sub_emp_years, base_year)
 
 	res_hh = pd.concat([reg_hh, sub_hh], ignore_index=True)
 	res_emp = pd.concat([reg_emp, sub_emp], ignore_index=True)
