@@ -364,7 +364,7 @@ def run_step(context):
 	min_added = int(cfg.get('min_added_break', 10))
 	save_csv = bool(cfg.get('save_csv', True))
 	forecast_table = cfg.get('forecast_table', 'split_ct_unrolled_regional')
-	output_table = cfg.get('output_table', 'annual_household_control_totals_region')
+	output_table = cfg.get('output_table', 'regional_CTs_hh')
 	income_bins = cfg.get('income_bins', DEFAULT_INCOME_BINS)
 	income_labels = cfg.get('income_labels', DEFAULT_INCOME_LABELS)
 	if len(income_bins) != len(income_labels):
@@ -373,7 +373,7 @@ def run_step(context):
 	create_emp_totals = bool(cfg.get('create_emp_totals', False))
 	scale_emp_controls = bool(cfg.get('scale_emp_controls', True))
 	emp_ct_table = cfg.get('emp_ct_table')
-	emp_output_table = cfg.get('emp_output_table', 'annual_employment_control_totals_region')
+	emp_output_table = cfg.get('emp_output_table', 'regional_CTs_emp')
 	if create_emp_totals and not emp_ct_table:
 		raise ValueError('regional_cts.emp_ct_table must be set when create_emp_totals is true')
 

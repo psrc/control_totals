@@ -454,14 +454,16 @@ def run_step(context):
 	res_hh = res_hh[res_hh['year'] <= end_year].reset_index(drop=True)
 	res_emp = res_emp[res_emp['year'] <= end_year].reset_index(drop=True)
 
-	pipeline.save_table('annual_household_control_totals', res_hh)
-	pipeline.save_table('annual_employment_control_totals', res_emp)
+	output_table_hh = 'subregionalCTs_hh'
+	output_table_emp = 'subregionalCTs_emp'
+	pipeline.save_table(output_table_hh, res_hh)
+	pipeline.save_table(output_table_emp, res_emp)
 
 	if save_csv:
 		out_dir = Path(pipeline.get_output_dir())
 		out_dir.mkdir(parents=True, exist_ok=True)
-		res_hh.to_csv(out_dir / 'annual_household_control_totals.csv', index=False)
-		res_emp.to_csv(out_dir / 'annual_employment_control_totals.csv', index=False)
+		res_hh.to_csv(out_dir / f'{output_table_hh}.csv', index=False)
+		res_emp.to_csv(out_dir / f'{output_table_emp}.csv', index=False)
 		print(f'Wrote CSV outputs to {out_dir}')
 
 	return context
