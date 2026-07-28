@@ -191,22 +191,34 @@ census_variables:
 
 
 #----------------------------
+# GDB layers
+#----------------------------
+gdb_layers:
+  - name: control_areas
+    file: Q:/Projects/2023_Baseyear/Political/control_geographies/control.gdb
+    layer: control26
+  - name: control_hct
+    file: Q:/Projects/2023_Baseyear/Political/control_geographies/control.gdb
+    layer: control_hct26
+
+
+#----------------------------
 # Elmer settings
 #----------------------------
 # issues with pulling all columns from ElmerGeo, so columns need to be specified
 ElmerGeo: # database
- - name: control_areas
-   sql_table: CONTROL26
-   columns:
-    - control_id
-    - control_name
-   id_col: control_id
+#  - name: control_areas
+#    sql_table: CONTROL26
+#    columns:
+#     - control_id
+#     - control_name
+#    id_col: control_id
 
- - name: control_hct
-   sql_table: CONTROL_HCT26
-   columns:
-    - chct_id
-   id_col: chct_id
+#  - name: control_hct
+#    sql_table: CONTROL_HCT26
+#    columns:
+#     - chct_id
+#    id_col: chct_id
 
  - name: blocks
    sql_table: BLOCK2020
@@ -319,6 +331,7 @@ tables_backup_dir: J:/Projects/LandUseVision/LUV.3/Control_totals/ProcessUpdateP
 steps:
  - steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
  - steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
+ - steps.data_loading.load_gdb_layers # loads layers from gdb into hdf5
  - steps.geoprocessing.parcel_control_hct_xwalk # creates parcel to control_hct crosswalk
  - steps.data_loading.load_data # loads data from csv files into hdf5
  - steps.geoprocessing.block_control_area_xwalk # creates block to control area crosswalk
