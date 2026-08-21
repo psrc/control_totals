@@ -113,6 +113,9 @@ split_hct:
   use_mysql: true                        # fetch base data from MySQL instead of file/pipeline
   save_base_data_file: false             # persist MySQL-fetched base data to file
   aggregate_no_growth_areas: false       # collapse no-growth geographies before splitting
+  preserve_target_level: false            # measure growth from the urbansim base data so horizon-year
+                                         # levels match the control totals; false keeps the control-total
+                                         # growth increment instead (legacy R behavior)
   round_interpolated: false              # round interpolated values to integers
   save_results: true                     # write Excel output workbooks
   max_iterations: 2000                   # max scaling iterations per indicator
@@ -323,7 +326,7 @@ targets_tables:
 
 # network location for saving backup of input tables, any needed tables not in /data will be copied from here
 tables_backup_dir: J:/Projects/LandUseVision/LUV.3/Control_totals/ProcessUpdatePython2026Inputs
-
+emp_tables_backup_dir: J:/Confid/Emp/Internal_Support/James
 
 #----------------------------
 # Pypyr steps

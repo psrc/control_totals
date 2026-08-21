@@ -25,8 +25,8 @@ def ensure_required_input_files(pipeline):
     """Verify that all required input CSV files exist, copying from backup if needed.
 
     If a required file is missing from the data directory, attempts to copy
-    it from the ``tables_backup_dir`` setting. Raises an error listing any
-    files that could not be found.
+    it from the ``tables_backup_dir`` or ``emp_tables_backup_dir`` settings.
+    Raises an error listing any files that could not be found.
 
     Args:
         pipeline (Pipeline): The data pipeline providing access to settings
@@ -34,12 +34,15 @@ def ensure_required_input_files(pipeline):
 
     Raises:
         FileNotFoundError: If any required files are missing and cannot be
-            copied from the backup directory.
+            copied from the backup directories.
     """
     p = pipeline
     data_dir = Path(p.get_data_dir())
-    backup_dir_setting = p.settings.get('tables_backup_dir')
-    backup_dir = Path(backup_dir_setting) if backup_dir_setting else None
+    backup_dirs = [
+        Path(p.settings[setting])
+        for setting in ('tables_backup_dir', 'emp_tables_backup_dir')
+        if p.settings.get(setting)
+    ]
 
     missing_from_backup = []
     for file_name in get_required_input_files(p):
@@ -47,12 +50,11 @@ def ensure_required_input_files(pipeline):
         if data_file.exists():
             continue
 
-        if backup_dir is None:
-            missing_from_backup.append(str(data_file))
-            continue
-
-        backup_file = backup_dir / file_name
-        if not backup_file.exists():
+        backup_file = next(
+            (backup_dir / file_name for backup_dir in backup_dirs if (backup_dir / file_name).exists()),
+            None,
+        )
+        if backup_file is None:
             missing_from_backup.append(str(data_file))
             continue
 
@@ -63,7 +65,7 @@ def ensure_required_input_files(pipeline):
     if missing_from_backup:
         raise FileNotFoundError(
             "Required input files were not found in the data directory and could not be copied from "
-            f"tables_backup_dir: {missing_from_backup}"
+            f"tables_backup_dir or emp_tables_backup_dir: {missing_from_backup}"
         )
 
 def load_data_tables_to_hdf5(pipeline):

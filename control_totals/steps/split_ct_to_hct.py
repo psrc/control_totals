@@ -549,7 +549,116 @@ def _aggregate_no_growth_area_rows(df, indicator, aggr_geo):
 	return pd.concat([preserved, aggregated], ignore_index=True, sort=False)
 
 
-def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgshare, step_values, aggregate_no_growth_areas, max_iterations):
+def _rebase_targets_to_generators(targets, ct_generators):
+	"""Re-anchor target growth on the base data so horizon levels are preserved.
+
+	By default the split distributes ``target - base`` taken from the
+	control-totals workbook (an OFM/QCEW-anchored growth increment) and adds
+	it to the UrbanSim base-year counts, so the horizon-year level lands short
+	of the control total by the difference between the two base-year sources.
+	Replacing each target's ``base`` with the UrbanSim base summed to the
+	no-split geography makes the split distribute ``target - urbansim_base``
+	instead, so the horizon-year level reproduces the control total exactly.
+
+	Args:
+		targets (dict): Per-indicator target DataFrames from
+			:func:`load_targets`.
+		ct_generators (dict): Per-indicator generator DataFrames from
+			:func:`create_ct_generators`, whose ``base`` column holds the
+			UrbanSim base-year counts.
+
+	Returns:
+		dict: New per-indicator target DataFrames with a rebased ``base``
+			column, and recomputed ``trg_pph`` / ``trg_pop`` on ``'HH'``.
+	"""
+	rebased = {}
+	for indicator, frame in targets.items():
+		geo_base = (
+			ct_generators[indicator]
+			.groupby('nosplit_geo_id', as_index=False)['base']
+			.sum()
+			.rename(columns={'base': 'gen_base'})
+		)
+		merged = frame.merge(geo_base, on='nosplit_geo_id', how='left')
+		merged['base'] = merged['gen_base'].fillna(merged['base'])
+		rebased[indicator] = merged.drop(columns=['gen_base'])
+
+	hh_growth = rebased['HH']['target'] - rebased['HH']['base']
+	pop_growth = rebased['HHPop']['target'] - rebased['HHPop']['base']
+	rebased['HH']['trg_pph'] = _series_divide(pop_growth, hh_growth, default=0).fillna(0)
+	rebased['HH']['trg_pop'] = pop_growth
+	return rebased
+
+
+def _warn_negative_growth(df, indicator, max_listed=20):
+	"""Warn when negative target growth reaches the TOD capacity-share algorithm.
+
+	The algorithm assigns TOD growth as ``trggrowth * capshare / 100`` and
+	reports ``target.share`` as ``wtrg / trggrowth * 100``. When *trggrowth*
+	is negative both invert: raising a geography's capacity share lowers its
+	assigned growth, and the reported share flips sign, which also distorts
+	the region-wide TOD share driving the convergence loop. Geographies with
+	no TOD split pass *trggrowth* straight through and are unaffected.
+
+	Args:
+		df (pandas.DataFrame): Working DataFrame with ``nosplit_geo_id``,
+			``is_tod``, and ``trggrowth`` columns.
+		indicator (str): Indicator name, used in the warning message.
+		max_listed (int, optional): Maximum number of geography IDs to name.
+	"""
+	by_geo = df[['nosplit_geo_id', 'trggrowth']].drop_duplicates('nosplit_geo_id')
+	negative = by_geo[by_geo['trggrowth'] < 0]
+	if negative.empty:
+		return
+
+	tod_ids = set(df.loc[df['is_tod'], 'nosplit_geo_id'])
+	affected = negative[negative['nosplit_geo_id'].isin(tod_ids)]
+	positive_total = by_geo.loc[by_geo['trggrowth'] > 0, 'trggrowth'].sum()
+
+	message = (
+		f'{indicator}: {len(negative)} control areas have negative target growth '
+		f'(total {negative["trggrowth"].sum():,.0f} against {positive_total:,.0f} of positive growth). '
+		'This happens when the base-year data already exceeds the horizon-year control total.'
+	)
+	if not affected.empty:
+		worst = affected.reindex(affected['trggrowth'].sort_values().index).head(max_listed)
+		message += (
+			f' {len(affected)} of them have a TOD split, where the capacity-share algorithm inverts '
+			f'(higher capacity share yields less growth) and target.share is not meaningful. '
+			f'Largest: {[(int(row.nosplit_geo_id), round(float(row.trggrowth))) for row in worst.itertuples()]}'
+		)
+	warnings.warn(message)
+
+
+def _warn_target_level_drift(df, indicator, tolerance=1.0, max_listed=10):
+	"""Warn when the split fails to reproduce the control-total horizon level.
+
+	With target levels preserved the per-geography ``trgdif`` should be zero.
+	A non-zero value means growth was clipped somewhere -- either at the
+	base-year floor (``wtrg >= -base``) or by non-TOD capacity overflow.
+
+	Args:
+		df (pandas.DataFrame): Working DataFrame with ``nosplit_geo_id`` and
+			``trgdif`` columns.
+		indicator (str): Indicator name, used in the warning message.
+		tolerance (float, optional): Absolute drift below which a geography
+			is treated as matching. Defaults to 1.0.
+		max_listed (int, optional): Maximum number of geographies to name.
+	"""
+	drift = df[['nosplit_geo_id', 'trgdif']].drop_duplicates('nosplit_geo_id')
+	drift = drift[drift['trgdif'].abs() > tolerance]
+	if drift.empty:
+		return
+
+	worst = drift.reindex(drift['trgdif'].abs().sort_values(ascending=False).index).head(max_listed)
+	warnings.warn(
+		f'{indicator}: {len(drift)} control areas did not reach their control-total level after the '
+		f'split (net drift {drift["trgdif"].sum():,.0f}); growth was clipped at the base-year floor or '
+		f'by capacity. Largest: {[(int(row.nosplit_geo_id), round(float(row.trgdif))) for row in worst.itertuples()]}'
+	)
+
+
+def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgshare, step_values, aggregate_no_growth_areas, max_iterations, preserve_target_level=False):
 	"""Run the iterative TOD/non-TOD growth-split algorithm for one scenario.
 
 	For each indicator (HH, Emp, HHPop), distributes growth between TOD and
@@ -567,6 +676,10 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 		aggregate_no_growth_areas (bool): Whether to collapse no-growth
 			geographies before splitting.
 		max_iterations (int): Maximum number of scaling iterations.
+		preserve_target_level (bool, optional): When True, measure growth from
+			the base data rather than from the control-totals base year, so the
+			horizon-year level reproduces the control total. Defaults to False,
+			which preserves the control-total growth increment instead.
 
 	Returns:
 		dict: Dictionary with keys ``'hhres'``, ``'popres'``, ``'empres'``,
@@ -578,6 +691,9 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 	todshare_sub = {}
 	weights = {}
 	aggr_geo = np.array([], dtype=int)
+
+	if preserve_target_level:
+		targets = _rebase_targets_to_generators(targets, ct_generators)
 
 	for indicator in ['HH', 'Emp', 'HHPop']:
 		target_df = targets[indicator].copy()
@@ -616,6 +732,9 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 				if len(no_pass) > 0:
 					warnings.warn(f'Aggregated employment geographies exceeded filter: {sorted(no_pass.tolist())}')
 			working = _aggregate_no_growth_area_rows(working, indicator, aggr_geo)
+
+		if indicator != 'HHPop':
+			_warn_negative_growth(working, indicator)
 
 		if indicator == 'HHPop':
 			hh_split = ct_df['HH'][['nosplit_geo_id', 'is_tod', 'has_tod', 'target.share', 'wtrg', 'wtrg.pph']].copy()
@@ -715,6 +834,8 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 		df.loc[~df['has_tod'], 'target.share'] = 100.0
 		df['geotottarget.final'] = df.groupby('nosplit_geo_id')['tottrg.final'].transform('sum')
 		df['trgdif'] = df['geotottarget.final'] - df['geotottarget.orig']
+		if preserve_target_level:
+			_warn_target_level_drift(df, indicator)
 		df = df.sort_values(['nosplit_geo_id', 'is_tod'], ascending=[True, False]).reset_index(drop=True)
 
 		rg_tod = df.loc[df['is_tod']].groupby('RGID', as_index=False)['wtrg'].sum()
@@ -969,6 +1090,7 @@ def run_step(context):
 		  use_mysql: false
 		  save_base_data_file: false
 		  aggregate_no_growth_areas: false
+		  preserve_target_level: false
 		  round_interpolated: false
 		  save_results: true
 		  max_iterations: 2000
@@ -998,6 +1120,7 @@ def run_step(context):
 	db = get_mysql_config(pipeline)
 	parcel_base_year = db['parcel_base_year']
 	aggregate_no_growth_areas = bool(cfg.get('aggregate_no_growth_areas', False))
+	preserve_target_level = bool(cfg.get('preserve_target_level', False))
 	round_interpolated = bool(cfg.get('round_interpolated', False))
 	save_results = bool(cfg.get('save_results', True))
 	max_iterations = int(cfg.get('max_iterations', 2000))
@@ -1053,6 +1176,7 @@ def run_step(context):
 			step_values=step_values,
 			aggregate_no_growth_areas=aggregate_no_growth_areas,
 			max_iterations=max_iterations,
+			preserve_target_level=preserve_target_level,
 		)
 
 		cts = build_interpolated_outputs(
