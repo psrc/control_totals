@@ -113,7 +113,7 @@ split_hct:
   use_mysql: true                        # fetch base data from MySQL instead of file/pipeline
   save_base_data_file: false             # persist MySQL-fetched base data to file
   aggregate_no_growth_areas: false       # collapse no-growth geographies before splitting
-  preserve_target_level: false            # measure growth from the urbansim base data so horizon-year
+  preserve_target_level: true            # measure growth from the urbansim base data so horizon-year
                                          # levels match the control totals; false keeps the control-total
                                          # growth increment instead (legacy R behavior)
   round_interpolated: false              # round interpolated values to integers
@@ -198,10 +198,10 @@ census_variables:
 #----------------------------
 gdb_layers:
   - name: control_areas
-    file: Q:/Projects/2023_Baseyear/Political/control_geographies/control.gdb
+    file: Q:/Projects/2023_Baseyear/Political/control_geographies_test/control.gdb
     layer: control26
   - name: control_hct
-    file: Q:/Projects/2023_Baseyear/Political/control_geographies/control.gdb
+    file: Q:/Projects/2023_Baseyear/Political/control_geographies_test/control.gdb
     layer: control_hct26
 
 
