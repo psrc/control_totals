@@ -116,6 +116,9 @@ split_hct:
   preserve_target_level: true            # measure growth from the urbansim base data so horizon-year
                                          # levels match the control totals; false keeps the control-total
                                          # growth increment instead (legacy R behavior)
+  prevent_negative_growth: [HH, HHPop, Emp]   # indicators whose target is floored at the urbansim base level so a
+                                         # control area (e.g. one whose urbansim HH count already exceeds its
+                                         # OFM-derived target) holds flat instead of declining
   round_interpolated: false              # round interpolated values to integers
   save_results: true                     # write Excel output workbooks
   max_iterations: 2000                   # max scaling iterations per indicator

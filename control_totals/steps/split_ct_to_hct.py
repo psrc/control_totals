@@ -590,6 +590,42 @@ def _rebase_targets_to_generators(targets, ct_generators):
 	return rebased
 
 
+def _apply_negative_growth_floor(targets, indicators):
+	"""Floor target growth at zero for the given indicators.
+
+	Raises each indicator's ``target`` up to its ``base`` wherever the target
+	implies a decline, so a control area holds at its base-year level instead
+	of shrinking. This matters most under ``preserve_target_level``, where
+	``base`` is the UrbanSim base data: a control area whose UrbanSim base
+	count already exceeds its OFM-derived horizon-year target would otherwise
+	be assigned negative growth. When ``'HH'`` is included, ``trg_pph`` /
+	``trg_pop`` are recomputed from the floored HH and HHPop targets so
+	household size stays consistent.
+
+	Args:
+		targets (dict): Per-indicator target DataFrames.
+		indicators (list[str]): Indicator names to floor (subset of ``'HH'``,
+			``'Emp'``, ``'HHPop'``).
+
+	Returns:
+		dict: New per-indicator target DataFrames with floored targets.
+	"""
+	floored = dict(targets)
+	for indicator in indicators:
+		frame = floored[indicator].copy()
+		frame['target'] = np.maximum(frame['target'], frame['base'])
+		floored[indicator] = frame
+
+	if 'HH' in indicators:
+		hh_growth = floored['HH']['target'] - floored['HH']['base']
+		pop_growth = floored['HHPop']['target'] - floored['HHPop']['base']
+		hh_frame = floored['HH'].copy()
+		hh_frame['trg_pph'] = _series_divide(pop_growth, hh_growth, default=0).fillna(0)
+		hh_frame['trg_pop'] = pop_growth
+		floored['HH'] = hh_frame
+	return floored
+
+
 def _warn_negative_growth(df, indicator, max_listed=20):
 	"""Warn when negative target growth reaches the TOD capacity-share algorithm.
 
@@ -658,7 +694,7 @@ def _warn_target_level_drift(df, indicator, tolerance=1.0, max_listed=10):
 	)
 
 
-def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgshare, step_values, aggregate_no_growth_areas, max_iterations, preserve_target_level=False):
+def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgshare, step_values, aggregate_no_growth_areas, max_iterations, preserve_target_level=False, prevent_negative_growth=None):
 	"""Run the iterative TOD/non-TOD growth-split algorithm for one scenario.
 
 	For each indicator (HH, Emp, HHPop), distributes growth between TOD and
@@ -680,6 +716,10 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 			the base data rather than from the control-totals base year, so the
 			horizon-year level reproduces the control total. Defaults to False,
 			which preserves the control-total growth increment instead.
+		prevent_negative_growth (list[str], optional): Indicator names
+			(subset of ``'HH'``, ``'Emp'``, ``'HHPop'``) whose target is
+			floored at the base level so a control area cannot be assigned
+			negative growth. Defaults to ``None`` (no flooring).
 
 	Returns:
 		dict: Dictionary with keys ``'hhres'``, ``'popres'``, ``'empres'``,
@@ -694,6 +734,9 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 
 	if preserve_target_level:
 		targets = _rebase_targets_to_generators(targets, ct_generators)
+
+	if prevent_negative_growth:
+		targets = _apply_negative_growth_floor(targets, prevent_negative_growth)
 
 	for indicator in ['HH', 'Emp', 'HHPop']:
 		target_df = targets[indicator].copy()
@@ -1091,6 +1134,7 @@ def run_step(context):
 		  save_base_data_file: false
 		  aggregate_no_growth_areas: false
 		  preserve_target_level: false
+		  prevent_negative_growth: []  # e.g. [HH, HHPop]; floors target at base so growth can't go negative
 		  round_interpolated: false
 		  save_results: true
 		  max_iterations: 2000
@@ -1121,6 +1165,7 @@ def run_step(context):
 	parcel_base_year = db['parcel_base_year']
 	aggregate_no_growth_areas = bool(cfg.get('aggregate_no_growth_areas', False))
 	preserve_target_level = bool(cfg.get('preserve_target_level', False))
+	prevent_negative_growth = cfg.get('prevent_negative_growth', [])
 	round_interpolated = bool(cfg.get('round_interpolated', False))
 	save_results = bool(cfg.get('save_results', True))
 	max_iterations = int(cfg.get('max_iterations', 2000))
@@ -1177,6 +1222,7 @@ def run_step(context):
 			aggregate_no_growth_areas=aggregate_no_growth_areas,
 			max_iterations=max_iterations,
 			preserve_target_level=preserve_target_level,
+			prevent_negative_growth=prevent_negative_growth,
 		)
 
 		cts = build_interpolated_outputs(
