@@ -997,7 +997,8 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 
 
 def build_interpolated_outputs(hhres, popres, empres, check, base_year, base_year_in_targets, target_year,
-							 round_interpolated=False, stepped_years=None):
+							 round_interpolated=False, stepped_years=None,
+							 mid_year=None, mid_hhres=None, mid_popres=None, mid_empres=None):
 	"""Interpolate split results into stepped and annual control-totals sheets.
 
 	Produces interpolated control totals at the configured stepped years, an
@@ -1017,6 +1018,16 @@ def build_interpolated_outputs(hhres, popres, empres, check, base_year, base_yea
 			stepped output. When ``None``, defaults to 5-year intervals
 			from *base_year* through *target_year*, plus the base year
 			used in targets.
+		mid_year (int, optional): An intermediate horizon year (e.g. the
+			growth-targets end year) whose own split results should be used
+			as an additional interpolation anchor, so its control-total
+			level is preserved exactly rather than being linearly
+			interpolated between *base_year_in_targets* and *target_year*.
+			Defaults to None (two-point interpolation, legacy behavior).
+		mid_hhres, mid_popres, mid_empres (pandas.DataFrame, optional):
+			Split results for *mid_year*, from a separate
+			:func:`split_targets_for_scenario` run. Required when
+			*mid_year* is given.
 
 	Returns:
 		dict: Dictionary of DataFrames keyed by indicator name plus
@@ -1033,12 +1044,26 @@ def build_interpolated_outputs(hhres, popres, empres, check, base_year, base_yea
 	hhpop_work = popres.rename(columns={'HHPopbase': f'HHPop{base_year_in_targets}', 'HHPoptarget': f'HHPop{target_year}'})
 	emp_work = empres.rename(columns={'Empbase': f'Emp{base_year_in_targets}', 'Emptarget': f'Emp{target_year}'})
 
+	anchor_years = [base_year_in_targets, target_year]
+	if mid_year is not None:
+		mid_hh = mid_hhres[['subreg_id', 'HHtarget', 'PPHtarget']].rename(
+			columns={'HHtarget': f'HH{mid_year}', 'PPHtarget': f'PPH{mid_year}'}
+		)
+		mid_pop = mid_popres[['subreg_id', 'HHPoptarget']].rename(columns={'HHPoptarget': f'HHPop{mid_year}'})
+		mid_emp = mid_empres[['subreg_id', 'Emptarget']].rename(columns={'Emptarget': f'Emp{mid_year}'})
+		hh_work = hh_work.merge(mid_hh, on='subreg_id', how='left')
+		hhpop_work = hhpop_work.merge(mid_pop, on='subreg_id', how='left')
+		emp_work = emp_work.merge(mid_emp, on='subreg_id', how='left')
+		anchor_years = sorted({base_year_in_targets, mid_year, target_year})
+
 	to_interpolate = {'HHPop': hhpop_work, 'HH': hh_work, 'Emp': emp_work}
 	cts = {'HHwork': hh_work, 'HHPopwork': hhpop_work, 'EMPwork': emp_work, 'check': check}
 	if stepped_years is None:
 		stepped_years = [base_year_in_targets, *range(base_year, target_year + 1, 5)]
 		if target_year not in stepped_years:
 			stepped_years.append(target_year)
+	if mid_year is not None and mid_year not in stepped_years:
+		stepped_years.append(mid_year)
 	stepped_years = sorted(set(stepped_years))
 
 	unrolled = None
@@ -1046,7 +1071,7 @@ def build_interpolated_outputs(hhres, popres, empres, check, base_year, base_yea
 		cts[indicator] = interpolate_controls_with_anchors(
 			frame,
 			indicator,
-			anchor_years=sorted({base_year_in_targets, target_year}),
+			anchor_years=anchor_years,
 			years_to_fit=stepped_years,
 			id_col='subreg_id',
 			round_interpolated=round_interpolated,
@@ -1057,15 +1082,15 @@ def build_interpolated_outputs(hhres, popres, empres, check, base_year, base_yea
 
 	annual_years = list(range(base_year, target_year + 1))
 	annual_regional = None
-	anchors = sorted({base_year, base_year_in_targets, target_year})
+	regional_anchor_years = sorted({base_year, *anchor_years})
 	for indicator, frame in to_interpolate.items():
-		regional_columns = [f'{indicator}{year}' for year in anchors]
+		regional_columns = [f'{indicator}{year}' for year in regional_anchor_years]
 		regional = frame[regional_columns].sum().to_frame().T
 		regional.insert(0, 'subreg_id', -1)
 		reg_intp = interpolate_controls_with_anchors(
 			regional,
 			indicator,
-			anchor_years=anchors,
+			anchor_years=regional_anchor_years,
 			years_to_fit=annual_years,
 			id_col='subreg_id',
 			round_interpolated=round_interpolated,
@@ -1161,6 +1186,7 @@ def run_step(context):
 	base_year = int(settings.get('base_year', 2020))
 	base_year_in_targets = int(cfg['base_year_in_targets']) if cfg.get('base_year_in_targets') else base_year
 	target_year = int(settings.get('end_year', 2050))
+	targets_end_year = int(settings.get('targets_end_year')) if settings.get('targets_end_year') else target_year
 	db = get_mysql_config(pipeline)
 	parcel_base_year = db['parcel_base_year']
 	aggregate_no_growth_areas = bool(cfg.get('aggregate_no_growth_areas', False))
@@ -1186,6 +1212,11 @@ def run_step(context):
 	step_values = cfg.get('step_values', [1, 0.5, 0.25])
 
 	targets, ct_sheets = load_targets(workbook_path, base_year_in_targets, target_year)
+	# When preserving the target level, also split growth to targets_end_year (e.g. 2044)
+	# on its own so that horizon is an exact interpolation anchor too, not just target_year.
+	mid_targets = None
+	if preserve_target_level and targets_end_year != target_year:
+		mid_targets, _ = load_targets(workbook_path, base_year_in_targets, targets_end_year)
 	_, geo_cap = load_capacity(capacity_path)
 
 	use_mysql = bool(cfg.get('use_mysql', False))
@@ -1225,6 +1256,21 @@ def run_step(context):
 			prevent_negative_growth=prevent_negative_growth,
 		)
 
+		mid_result = None
+		if mid_targets is not None:
+			mid_result = split_targets_for_scenario(
+				targets={key: value.copy() for key, value in mid_targets.items()},
+				ct_generators={key: value.copy() for key, value in ct_generators.items()},
+				geo_cap=geo_cap,
+				scenario=scenario,
+				trgshare=trgshare,
+				step_values=step_values,
+				aggregate_no_growth_areas=aggregate_no_growth_areas,
+				max_iterations=max_iterations,
+				preserve_target_level=preserve_target_level,
+				prevent_negative_growth=prevent_negative_growth,
+			)
+
 		cts = build_interpolated_outputs(
 			split_result['hhres'],
 			split_result['popres'],
@@ -1235,6 +1281,10 @@ def run_step(context):
 			target_year=target_year,
 			round_interpolated=round_interpolated,
 			stepped_years=stepped_years,
+			mid_year=targets_end_year if mid_result is not None else None,
+			mid_hhres=mid_result['hhres'] if mid_result is not None else None,
+			mid_popres=mid_result['popres'] if mid_result is not None else None,
+			mid_empres=mid_result['empres'] if mid_result is not None else None,
 		)
 
 		scenario_suffix = '-'.join(str(100 - int(value)) for value in scenario['HH'])
