@@ -114,6 +114,7 @@ split_hct:
   prevent_negative_growth: [HH, HHPop, Emp]   # indicators whose target is floored at the urbansim base level so a
                                          # control area (e.g. one whose urbansim HH count already exceeds its
                                          # OFM-derived target) holds flat instead of declining
+  netcap_factor: 0.9                     # factor to adjust net capacity
   round_interpolated: false              # round interpolated values to integers
   save_results: true                     # write Excel output workbooks
   save_plots: true                       # write diagnostic PNG plots to <output_dir>/plots
@@ -351,9 +352,9 @@ steps:
 #  - steps.extrapolate_to_controls_year # extrapolates out to the control totals end year from the targets end year
 #  - steps.create_controls # creates final control totals table by bringing in the non-growth areas
 
- - steps.parcels_capacity # calculates capacities
- - steps.create_control_totals_rebased_targets # creates rebased targets and interpolated control totals in Python
- - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
+#  - steps.parcels_capacity # calculates capacities
+#  - steps.create_control_totals_rebased_targets # creates rebased targets and interpolated control totals in Python
+#  - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
  - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
  - steps.subregionalCTs # distributes city CTs by PPH and rebalances to controls
  - steps.regionalCTs # distributes regional CTs by PPH/workers/income and rebalances to controls

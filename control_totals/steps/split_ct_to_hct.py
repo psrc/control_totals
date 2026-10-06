@@ -283,7 +283,7 @@ def create_ct_generators(base_data):
 	return {'HH': hh, 'Emp': emp, 'HHPop': pop}
 
 
-def merge_with_capacity(df, geo_cap, capacity_prefix):
+def merge_with_capacity(df, geo_cap, capacity_prefix, netcap_factor):
 	"""Merge geography-level capacity data into a generator DataFrame.
 
 	Adds total capacity, net capacity, geography-level net capacity, and
@@ -294,6 +294,7 @@ def merge_with_capacity(df, geo_cap, capacity_prefix):
 		df (pandas.DataFrame): Generator DataFrame to merge into.
 		geo_cap (pandas.DataFrame): Geography-level aggregated capacity.
 		capacity_prefix (str): Column prefix, either ``'DU'`` or ``'EMP'``.
+		netcap_factor (float): Factor to adjust net capacity.
 
 	Returns:
 		pandas.DataFrame: The input DataFrame with added capacity columns.
@@ -306,6 +307,7 @@ def merge_with_capacity(df, geo_cap, capacity_prefix):
 	)
 	merged['totcap'] = merged['totcap'].fillna(0)
 	merged['netcap'] = np.maximum(0, merged['totcap'] - merged['base'])
+	merged['netcap'] = merged['netcap'] * netcap_factor
 	merged['geonetcap'] = merged.groupby('nosplit_geo_id')['netcap'].transform('sum')
 	merged['capshare'] = _series_divide(merged['netcap'] * 100, merged['geonetcap'], default=np.nan)
 	merged.loc[merged['capshare'].isna() & merged['is_tod'], 'capshare'] = 100
@@ -1117,7 +1119,7 @@ def write_workbook(sheets, output_path):
 			frame.to_excel(writer, sheet_name=sheet_name, index=False)
 
 
-RG_LABELS = {1: 'Metro', 2: 'Core Cities', 3: 'HCT Comm', -1: 'Region'}
+RG_LABELS = {1: 'Metro', 2: 'Core Cities', 3: 'Larger Cities', -1: 'Region'}
 INDICATOR_TITLES = {'HH': 'Households', 'Emp': 'Employment'}
 
 
@@ -1143,7 +1145,7 @@ def plot_target_share_evolution(weights, indicator, output_dir, file_suffix):
 
 	Creates two PNG files per indicator: one with the target TOD share per
 	area and one with each area's share of the remaining TOD capacity. Each
-	file has one panel per regional geography (Metro, Core Cities, HCT Comm,
+	file has one panel per regional geography (Metro, Core Cities, Larger Cities,
 	Region).
 
 	Args:
@@ -1171,8 +1173,8 @@ def plot_target_share_evolution(weights, indicator, output_dir, file_suffix):
 	title = INDICATOR_TITLES.get(indicator, indicator)
 
 	specs = [
-		('target.share', 'target TOD share (%)', 0, f'target_shares_evol_{indicator}_{file_suffix}.png'),
-		('todcap.share', 'remaining TOD capacity share (%)', 1, f'remaining_capacity_shares_evol_{indicator}_{file_suffix}.png'),
+		('target.share', 'target HCT share (%)', 0, f'target_shares_evol_{indicator}_{file_suffix}.png'),
+		('todcap.share', 'remaining HCT capacity share (%)', 1, f'remaining_capacity_shares_evol_{indicator}_{file_suffix}.png'),
 	]
 	written = []
 	for value_col, ylabel, label_iter, file_name in specs:
@@ -1396,8 +1398,9 @@ def run_step(context):
 	
 	base_data = prepare_base_data(base_data, ct_sheets)
 	ct_generators = create_ct_generators(base_data)
-	ct_generators['HH'] = merge_with_capacity(ct_generators['HH'], geo_cap, 'DU')
-	ct_generators['Emp'] = merge_with_capacity(ct_generators['Emp'], geo_cap, 'EMP')
+	netcap_factor = cfg.get('netcap_factor', 1.0)
+	ct_generators['HH'] = merge_with_capacity(ct_generators['HH'], geo_cap, 'DU', netcap_factor)
+	ct_generators['Emp'] = merge_with_capacity(ct_generators['Emp'], geo_cap, 'EMP', netcap_factor)
 
 	today = date.today().isoformat()
 	for scenario in scenarios:
