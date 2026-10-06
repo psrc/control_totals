@@ -1117,6 +1117,162 @@ def write_workbook(sheets, output_path):
 			frame.to_excel(writer, sheet_name=sheet_name, index=False)
 
 
+RG_LABELS = {1: 'Metro', 2: 'Core Cities', 3: 'HCT Comm', -1: 'Region'}
+INDICATOR_TITLES = {'HH': 'Households', 'Emp': 'Employment'}
+
+
+def _plot_iteration_curves(ax, data, value_col, label_iter, color_map):
+	"""Draw one line per TOD area on ``ax`` and label each line at ``label_iter``."""
+	for geo_id, group in data.groupby('nosplit_geo_id'):
+		group = group.sort_values('iter')
+		ax.plot(group['iter'], group[value_col], color=color_map[geo_id], linewidth=1)
+		label_row = group[group['iter'] == label_iter]
+		if not label_row.empty:
+			ax.annotate(
+				label_row['name'].iloc[0],
+				(label_row['iter'].iloc[0], label_row[value_col].iloc[0]),
+				xytext=(2, -6),
+				textcoords='offset points',
+				fontsize=6,
+				color=color_map[geo_id],
+			)
+
+
+def plot_target_share_evolution(weights, indicator, output_dir, file_suffix):
+	"""Plot how TOD shares evolve over the scaling iterations.
+
+	Creates two PNG files per indicator: one with the target TOD share per
+	area and one with each area's share of the remaining TOD capacity. Each
+	file has one panel per regional geography (Metro, Core Cities, HCT Comm,
+	Region).
+
+	Args:
+		weights (pandas.DataFrame): Iteration snapshots from
+			``split_targets_for_scenario`` for ``indicator``.
+		indicator (str): ``'HH'`` or ``'Emp'``.
+		output_dir (pathlib.Path): Directory to write the images to; created
+			if missing.
+		file_suffix (str): Suffix appended to the file names.
+
+	Returns:
+		list[pathlib.Path]: Paths of the images written.
+	"""
+	import matplotlib
+	from matplotlib.figure import Figure
+
+	output_dir.mkdir(parents=True, exist_ok=True)
+	dat = weights[weights['RGID'].isin(RG_LABELS)].copy()
+	dat.loc[dat['target.share'] == 0, 'target.share'] = np.nan
+	dat.loc[(dat['todcap.share'] == 0) | dat['target.share'].isna(), 'todcap.share'] = np.nan
+
+	palette = matplotlib.colormaps['tab20']
+	geo_ids = sorted(dat['nosplit_geo_id'].unique())
+	color_map = {geo_id: palette(i % 20) for i, geo_id in enumerate(geo_ids)}
+	title = INDICATOR_TITLES.get(indicator, indicator)
+
+	specs = [
+		('target.share', 'target TOD share (%)', 0, f'target_shares_evol_{indicator}_{file_suffix}.png'),
+		('todcap.share', 'remaining TOD capacity share (%)', 1, f'remaining_capacity_shares_evol_{indicator}_{file_suffix}.png'),
+	]
+	written = []
+	for value_col, ylabel, label_iter, file_name in specs:
+		plot_data = dat[dat[value_col].notna()]
+		rg_ids = [rgid for rgid in RG_LABELS if (plot_data['RGID'] == rgid).any()]
+		if not rg_ids:
+			continue
+		ncols = 2
+		nrows = int(np.ceil(len(rg_ids) / ncols))
+		fig = Figure(figsize=(8, 9 if nrows > 1 else 5), layout='constrained')
+		axes = fig.subplots(nrows, ncols, squeeze=False)
+		for ax, rgid in zip(axes.flat, rg_ids):
+			_plot_iteration_curves(ax, plot_data[plot_data['RGID'] == rgid], value_col, label_iter, color_map)
+			ax.set_title(RG_LABELS[rgid], fontsize=9)
+			ax.set_xlabel('iteration')
+			ax.set_ylabel(ylabel)
+		for ax in axes.flat[len(rg_ids):]:
+			ax.set_visible(False)
+		fig.suptitle(title)
+		path = output_dir / file_name
+		fig.savefig(path, dpi=150)
+		written.append(path)
+	return written
+
+
+def plot_final_shares(weights, indicator, output_dir, file_suffix):
+	"""Plot starting (capacity-based) and final TOD shares per TOD area.
+
+	Each bar is stacked: the lower part is the TOD share before any scaling
+	(iteration 0, driven by capacity) and the upper part is the increase
+	reached by the final iteration. One panel per regional geography.
+
+	Args:
+		weights (pandas.DataFrame): Iteration snapshots from
+			``split_targets_for_scenario`` for ``indicator``.
+		indicator (str): ``'HH'`` or ``'Emp'``.
+		output_dir (pathlib.Path): Directory to write the image to; created
+			if missing.
+		file_suffix (str): Suffix appended to the file name.
+
+	Returns:
+		pathlib.Path or None: Path of the image, or ``None`` if there was
+			nothing to plot.
+	"""
+	from matplotlib.figure import Figure
+
+	dat = weights[weights['RGID'].isin([1, 2, 3])]
+	start = dat[dat['iter'] == 0][['nosplit_geo_id', 'RGID', 'name', 'target.share']].rename(columns={'target.share': 'start'})
+	final = dat[dat['iter'] == dat['iter'].max()][['nosplit_geo_id', 'RGID', 'target.share']].rename(columns={'target.share': 'final'})
+	bars = start.merge(final, on=['nosplit_geo_id', 'RGID'], how='inner')
+	if bars.empty:
+		return None
+	bars['increase'] = bars['final'] - bars['start']
+
+	rg_ids = [rgid for rgid in [1, 2, 3] if (bars['RGID'] == rgid).any()]
+	widths = [(bars['RGID'] == rgid).sum() for rgid in rg_ids]
+	fig = Figure(figsize=(max(8, 0.3 * sum(widths) + 2 * len(rg_ids)), 8), layout='constrained')
+	axes = fig.subplots(1, len(rg_ids), squeeze=False, sharey=True, gridspec_kw={'width_ratios': widths})
+	for ax, rgid in zip(axes[0], rg_ids):
+		sub = bars[bars['RGID'] == rgid].sort_values('start', ascending=False)
+		x = np.arange(len(sub))
+		ax.bar(x, sub['start'], color='tab:blue', label='capacity')
+		ax.bar(x, sub['increase'], bottom=sub['start'], color='tab:orange', label='after scaling')
+		ax.set_xticks(x)
+		ax.set_xticklabels(sub['name'], rotation=90, fontsize=7)
+		ax.set_title(RG_LABELS[rgid], fontsize=9)
+		ax.set_ylim(0, 100)
+	axes[0][0].set_ylabel('HCT shares (%)')
+	axes[0][-1].legend(title='HCT shares')
+	fig.suptitle(INDICATOR_TITLES.get(indicator, indicator))
+
+	path = output_dir / f'hct_final_shares_{indicator}_{file_suffix}.png'
+	output_dir.mkdir(parents=True, exist_ok=True)
+	fig.savefig(path, dpi=150)
+	return path
+
+
+def save_split_plots(weights, output_dir, file_suffix):
+	"""Write all diagnostic plots of the split algorithm as PNG images.
+
+	Args:
+		weights (dict[str, pandas.DataFrame]): Iteration snapshots keyed by
+			indicator, as returned by ``split_targets_for_scenario``.
+		output_dir (pathlib.Path): Directory to write the images to.
+		file_suffix (str): Suffix appended to the file names (scenario id).
+
+	Returns:
+		list[pathlib.Path]: Paths of the images written.
+	"""
+	written = []
+	for indicator in ['HH', 'Emp']:
+		if indicator not in weights:
+			continue
+		written.extend(plot_target_share_evolution(weights[indicator], indicator, output_dir, file_suffix))
+		bar_path = plot_final_shares(weights[indicator], indicator, output_dir, file_suffix)
+		if bar_path is not None:
+			written.append(bar_path)
+	return written
+
+
 def save_pipeline_outputs(pipeline, cts, scenario_suffix):
 	"""Persist split control-totals tables to the pipeline HDF5 store.
 
@@ -1162,6 +1318,7 @@ def run_step(context):
 		  prevent_negative_growth: []  # e.g. [HH, HHPop]; floors target at base so growth can't go negative
 		  round_interpolated: false
 		  save_results: true
+		  save_plots: true  # PNG diagnostics written to <output_dir>/plots
 		  max_iterations: 2000
 		  stepped_years: null
 		  trgshare:
@@ -1194,6 +1351,7 @@ def run_step(context):
 	prevent_negative_growth = cfg.get('prevent_negative_growth', [])
 	round_interpolated = bool(cfg.get('round_interpolated', False))
 	save_results = bool(cfg.get('save_results', True))
+	save_plots = bool(cfg.get('save_plots', True))
 	max_iterations = int(cfg.get('max_iterations', 2000))
 	stepped_years = cfg.get('stepped_years', None)
 
@@ -1291,6 +1449,9 @@ def run_step(context):
 		if save_results:
 			output_path = output_dir / f'LUVit_ct_by_tod_generator-{today}_{scenario_suffix}.xlsx'
 			write_workbook(cts, output_path)
+
+		if save_plots:
+			save_split_plots(split_result['weights'], output_dir / 'plots', scenario_suffix)
 
 		save_pipeline_outputs(pipeline, cts, scenario_suffix if len(scenarios) > 1 else 'default')
 

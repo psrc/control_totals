@@ -2,69 +2,69 @@
 
 This page documents the '''summer_2026''' control totals pipeline, which transforms census data, employment estimates, and county growth targets into final control totals for PSRC's Land Use Vision (LUVit) model. This version replaces all R script processing with native Python steps for interpolation, parcel capacity, and HCT splitting, and distributes the results into subregional and regional UrbanSim control-total tables. The pipeline is configured via <code>settings.yaml</code> and executed as a series of ordered steps.
 
-'''Note on control-area geography:''' Building the <code>control</code> and <code>control_hct</code> geography (unioning regional geographies, military bases, tribal areas, transit buffers, etc.) has moved '''out of this repo''' and into a separate repo, [https://github.com/psrc/control_total_geography control_total_geography]. That repo creates the control-area and control-HCT polygons and exports them to a geodatabase, which is then '''manually uploaded''' to PSRC's ElmerGeo database (as <code>CONTROL26</code> / <code>CONTROL_HCT26</code>). This repo now only '''reads''' those polygons back from ElmerGeo and uses them to build spatial crosswalks — it no longer creates control-area geography itself.
+'''Note on control-area geography:''' Building the <code>control</code> and <code>control_hct</code> geography (unioning regional geographies, military bases, tribal areas, transit buffers, etc.) has moved '''out of this repo''' and into a separate repo, [https://github.com/psrc/control_total_geography control_total_geography]. That repo creates the control-area and control-HCT polygons and exports them to a geodatabase, which is then '''manually uploaded''' to PSRC's ElmerGeo database (as <code>CONTROL26</code> / <code>CONTROL_HCT26</code>). This repo now only '''reads''' those polygons back from ElmerGeo and uses them to build spatial crosswalks â€” it no longer creates control-area geography itself.
 
 == Overview ==
 
 The pipeline follows seven phases:
 
-# '''Data Loading''' — Fetch external data (including the pre-built control-area/control-HCT geography) from PSRC's Elmer/ElmerGeo databases, Census API, and local CSV files; store in an HDF5 pipeline cache.
-# '''Geoprocessing''' — Build spatial crosswalks between census blocks, parcels, control areas, and control-HCT (TOD) sub-areas. (Geography '''creation''' now happens in the <code>control_total_geography</code> repo; see note above.)
-# '''Data Preparation''' — Aggregate parcel-level and block-level data to the control-area level.
-# '''Target Adjustment & Calculation''' — Calibrate county growth targets to the base year (2023) and calculate horizon-year (2044) targets using county-specific methodologies.
-# '''Extrapolation & Final Controls''' — Project targets to the control totals horizon year (2050), assemble the final control totals table, and export to Excel.
-# '''Python Post-Processing''' — Compute parcel capacity, interpolate interim years, and split control totals into HCT/non-HCT components — all in Python (replacing the legacy R scripts).
-# '''Subregional, Regional & Output''' — Disaggregate control totals into UrbanSim's PPH/workers/income control-total format at the subregional and regional level, then combine and publish the final tables to MySQL, the pipeline cache, and CSV.
+# '''Data Loading''' â€” Fetch external data (including the pre-built control-area/control-HCT geography) from PSRC's Elmer/ElmerGeo databases, Census API, and local CSV files; store in an HDF5 pipeline cache.
+# '''Geoprocessing''' â€” Build spatial crosswalks between census blocks, parcels, control areas, and control-HCT (TOD) sub-areas. (Geography '''creation''' now happens in the <code>control_total_geography</code> repo; see note above.)
+# '''Data Preparation''' â€” Aggregate parcel-level and block-level data to the control-area level.
+# '''Target Adjustment & Calculation''' â€” Calibrate county growth targets to the base year (2023) and calculate horizon-year (2044) targets using county-specific methodologies.
+# '''Extrapolation & Final Controls''' â€” Project targets to the control totals horizon year (2050), assemble the final control totals table, and export to Excel.
+# '''Python Post-Processing''' â€” Compute parcel capacity, interpolate interim years, and split control totals into HCT/non-HCT components â€” all in Python (replacing the legacy R scripts).
+# '''Subregional, Regional & Output''' â€” Disaggregate control totals into UrbanSim's PPH/workers/income control-total format at the subregional and regional level, then combine and publish the final tables to MySQL, the pipeline cache, and CSV.
 
 === Data Flow Diagram ===
 
 <pre>
-                         ┌──────────────┐
-                         │  Census API  │
-                         └──────┬───────┘
-                                │
-                                ▼
-                     ┌─────────────────────┐
-                     │  dec_block_data      │
-                     └──────────┬──────────┘
-                                │ aggregate by blocks
-                                ▼
-┌──────────────┐     ┌─────────────────────┐     ┌────────────────────────┐
-│  Elmer DB    │────▶│  OFM / Employment   │     │  County Targets (CSV)  │
-│  (ElmerGeo)  │     │  by Control Area    │     └───────────┬────────────┘
-└──────────────┘     └──────────┬──────────┘                 │
-                                │                            │ adjust to base year
-        aggregate by parcels    │                            ▼
-                                │              ┌─────────────────────────┐
-                                │              │  Adjusted Targets       │
-                                │              └───────────┬─────────────┘
-                                │                          │ extrapolate to 2050
-                                │                          ▼
-                                │              ┌─────────────────────────┐
-                                └─────────────▶│  Control Totals Table   │
-                                               └───────────┬─────────────┘
-                                                           │ export to Excel
-                                                           ▼
-                                               ┌─────────────────────────────┐
-                                               │  Python Post-Processing     │
-                                               │  • Parcel capacity          │
-                                               │  • Rebased targets          │
-                                               │  • Interpolation            │
-                                               │  • HCT split               │
-                                               └──────────────┬──────────────┘
-                                                              │
-                                                              ▼
-                                               ┌─────────────────────────────┐
-                                               │  Subregional CTs (by PPH)   │
-                                               │  Regional CTs (PPH/workers/ │
-                                               │  income)                    │
-                                               └──────────────┬──────────────┘
-                                                              │
-                                                              ▼
-                                               ┌─────────────────────────────┐
-                                               │  Output Control Totals      │
-                                               │  → MySQL / pipeline.h5 / CSV │
-                                               └─────────────────────────────┘
+                         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                         â”‚  Census API  â”‚
+                         â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜
+                                â”‚
+                                â–¼
+                     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                     â”‚  dec_block_data      â”‚
+                     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                â”‚ aggregate by blocks
+                                â–¼
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  Elmer DB    â”‚â”€â”€â”€â”€â–¶â”‚  OFM / Employment   â”‚     â”‚  County Targets (CSV)  â”‚
+â”‚  (ElmerGeo)  â”‚     â”‚  by Control Area    â”‚     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                 â”‚
+                                â”‚                            â”‚ adjust to base year
+        aggregate by parcels    â”‚                            â–¼
+                                â”‚              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                                â”‚              â”‚  Adjusted Targets       â”‚
+                                â”‚              â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                â”‚                          â”‚ extrapolate to 2050
+                                â”‚                          â–¼
+                                â”‚              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                                â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–¶â”‚  Control Totals Table   â”‚
+                                               â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                                           â”‚ export to Excel
+                                                           â–¼
+                                               â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                                               â”‚  Python Post-Processing     â”‚
+                                               â”‚  â€¢ Parcel capacity          â”‚
+                                               â”‚  â€¢ Rebased targets          â”‚
+                                               â”‚  â€¢ Interpolation            â”‚
+                                               â”‚  â€¢ HCT split               â”‚
+                                               â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                                              â”‚
+                                                              â–¼
+                                               â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                                               â”‚  Subregional CTs (by PPH)   â”‚
+                                               â”‚  Regional CTs (PPH/workers/ â”‚
+                                               â”‚  income)                    â”‚
+                                               â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                                              â”‚
+                                                              â–¼
+                                               â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                                               â”‚  Output Control Totals      â”‚
+                                               â”‚  â†’ MySQL / pipeline.h5 / CSV â”‚
+                                               â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 </pre>
 
 == Configuration ==
@@ -82,15 +82,15 @@ Key settings from <code>settings.yaml</code>:
 |-
 | <code>ref_base_year</code> || 2018 || REF (Regional Economic Forecast) base year used for 2018 employment and OFM data
 |-
-| <code>target_types</code> || — || All three non-King counties (Kitsap, Pierce, Snohomish) now use <code>unit_chg</code>; <code>total_pop_chg</code> is empty
+| <code>target_types</code> || â€” || All three non-King counties (Kitsap, Pierce, Snohomish) now use <code>unit_chg</code>; <code>total_pop_chg</code> is empty
 |-
-| <code>emp_target_types</code> || — || Employment target variants: <code>res_con</code> (Kitsap, Pierce) vs. <code>no_res_con</code> (King, Snohomish)
+| <code>emp_target_types</code> || â€” || Employment target variants: <code>res_con</code> (Kitsap, Pierce) vs. <code>no_res_con</code> (King, Snohomish)
 |-
-| <code>king_cnty_method</code> || True || Use King County–specific household size and vacancy rate method
+| <code>king_cnty_method</code> || True || Use King Countyâ€“specific household size and vacancy rate method
 |-
 | <code>control_areas_year</code> || 2026 || Year used to name the control/control_hct geography (built by the <code>control_total_geography</code> repo, read here from ElmerGeo)
 |-
-| <code>urbansim_mysql</code> || — || Shared MySQL connection settings (parcel base year, credentials env vars) used by the HCT split, subregional, and regional steps
+| <code>urbansim_mysql</code> || â€” || Shared MySQL connection settings (parcel base year, credentials env vars) used by the HCT split, subregional, and regional steps
 |}
 
 === Key Differences from Legacy Pipeline ===
@@ -102,7 +102,7 @@ Key settings from <code>settings.yaml</code>:
 |-
 | Non-King target methodology || Total population change (Kitsap, Pierce, Snohomish) || Housing unit change (all three counties)
 |-
-| Control area geography || Static shapefile from database || Built by the separate <code>control_total_geography</code> repo, manually uploaded to ElmerGeo (<code>CONTROL26</code>/<code>CONTROL_HCT26</code>), and read here directly — '''no longer built in this repo'''
+| Control area geography || Static shapefile from database || Built by the separate <code>control_total_geography</code> repo, manually uploaded to ElmerGeo (<code>CONTROL26</code>/<code>CONTROL_HCT26</code>), and read here directly â€” '''no longer built in this repo'''
 |-
 | HCT parcel flagging || External / manual || Parcels are spatially joined to the pre-built <code>control_hct</code> ElmerGeo layer (<code>geoprocessing.parcel_control_hct_xwalk</code>); TOD buffering itself happens in <code>control_total_geography</code>
 |-
@@ -138,13 +138,13 @@ Deletes any existing <code>pipeline.h5</code> file to ensure a clean slate for t
 Connects to PSRC's '''Elmer''' and '''ElmerGeo''' SQL Server databases and fetches the tables defined in settings:
 
 * '''ElmerGeo''' (geospatial):
-** Control areas (<code>CONTROL26</code>) — the control-area polygons, '''built and uploaded by the <code>control_total_geography</code> repo''' (no longer created in this repo)
-** Control HCT areas (<code>CONTROL_HCT26</code>) — the TOD/HCT split polygons, likewise built and uploaded by <code>control_total_geography</code>
+** Control areas (<code>CONTROL26</code>) â€” the control-area polygons, '''built and uploaded by the <code>control_total_geography</code> repo''' (no longer created in this repo)
+** Control HCT areas (<code>CONTROL_HCT26</code>) â€” the TOD/HCT split polygons, likewise built and uploaded by <code>control_total_geography</code>
 ** Census block polygons (<code>BLOCK2020</code>)
 ** Parcel point centroids: OFM vintage (<code>PARCELS_URBANSIM_2018_PTS</code>) and current (<code>PARCELS_URBANSIM_2023_PTS</code>)
 * '''Elmer''' (tabular): OFM parcelized estimates (<code>ofm.parcelized_saep</code>) for 2018, 2019, 2020, and 2023.
 
-All tables are saved to the HDF5 store with ID columns cast to <code>int64</code>. Note that the regional-geography, military-base, tribal-land, natural-resource, HCT-stop, urban-center, UGA, and PSRC-region layers formerly pulled here have been removed from this repo's settings — those are now only needed by the geography-'''creation''' steps in <code>control_total_geography</code>.
+All tables are saved to the HDF5 store with ID columns cast to <code>int64</code>. Note that the regional-geography, military-base, tribal-land, natural-resource, HCT-stop, urban-center, UGA, and PSRC-region layers formerly pulled here have been removed from this repo's settings â€” those are now only needed by the geography-'''creation''' steps in <code>control_total_geography</code>.
 
 === Step 3: Load Data ===
 
@@ -152,8 +152,8 @@ All tables are saved to the HDF5 store with ID columns cast to <code>int64</code
 
 Loads CSV files from the <code>data/</code> directory into the HDF5 store. Two categories of tables are loaded:
 
-* '''General data tables''' — <code>control_target_xwalk</code>, <code>borrow_distribution</code>, <code>ref_projection</code>, employment by control area for 2018/2019/2020/2023.
-* '''County growth targets''' — King, Kitsap, Pierce, and Snohomish target files. Column names are standardized (e.g., the configured <code>units_chg_col</code> is renamed to <code>units_chg</code>), and a <code>county_id</code> FIPS code is added.
+* '''General data tables''' â€” <code>control_target_xwalk</code>, <code>borrow_distribution</code>, <code>ref_projection</code>, employment by control area for 2018/2019/2020/2023.
+* '''County growth targets''' â€” King, Kitsap, Pierce, and Snohomish target files. Column names are standardized (e.g., the configured <code>units_chg_col</code> is renamed to <code>units_chg</code>), and a <code>county_id</code> FIPS code is added.
 
 Validation checks confirm that required base-year data exists for all target start years referenced in the targets tables. Missing files are optionally copied from the network backup directory (<code>tables_backup_dir</code>).
 
@@ -161,17 +161,17 @@ Validation checks confirm that required base-year data exists for all target sta
 
 == Phase 2: Geoprocessing ==
 
-Geoprocessing in this repo is now limited to '''spatial crosswalks''' — the control-area and control-HCT geography itself is created in the separate <code>control_total_geography</code> repo and read in from ElmerGeo (see the note in the Overview above).
+Geoprocessing in this repo is now limited to '''spatial crosswalks''' â€” the control-area and control-HCT geography itself is created in the separate <code>control_total_geography</code> repo and read in from ElmerGeo (see the note in the Overview above).
 
-=== Step 4: Parcel–Control HCT Crosswalk ===
+=== Step 4: Parcelâ€“Control HCT Crosswalk ===
 
 <code>control_totals.steps.geoprocessing.parcel_control_hct_xwalk</code>
 
 Spatially joins current-year parcel points (<code>parcel_pts_current</code>) to the <code>control_hct</code> polygons pulled from ElmerGeo (<code>predicate="within"</code>, no nearest-neighbor fallback). The HCT geography's <code>chct_id</code> encodes TOD sub-areas as <code>control_id + 1000</code>; this step converts that back to a base <code>control_id</code> (<code>chct_id - 1000</code> when <code>chct_id >= 1000</code>) and renames <code>chct_id</code> to <code>subreg_id</code>.
 
-Output: <code>current_parcel_control_area_xwalk</code> (columns <code>parcel_id</code>, <code>subreg_id</code>, <code>control_id</code>) — this is the crosswalk consumed throughout the HCT-split, subregional, and regional control-total steps.
+Output: <code>current_parcel_control_area_xwalk</code> (columns <code>parcel_id</code>, <code>subreg_id</code>, <code>control_id</code>) â€” this is the crosswalk consumed throughout the HCT-split, subregional, and regional control-total steps.
 
-=== Step 5: Block–Control Area Crosswalk ===
+=== Step 5: Blockâ€“Control Area Crosswalk ===
 
 <code>control_totals.steps.geoprocessing.block_control_area_xwalk</code>
 
@@ -179,7 +179,7 @@ Creates a spatial crosswalk between census blocks and control areas. Block polyg
 
 Output: <code>block_control_area_xwalk</code>.
 
-=== Step 6: Parcel–Control Area Crosswalk ===
+=== Step 6: Parcelâ€“Control Area Crosswalk ===
 
 <code>control_totals.steps.geoprocessing.parcel_control_area_xwalks</code>
 
@@ -218,10 +218,10 @@ Results are saved as <code>dec_block_data</code> in the HDF5 store.
 
 <code>control_totals.steps.data_loading.prepare_parcel_data</code>
 
-Aggregates parcel-level OFM estimates to the control-area level using the OFM parcel–control area crosswalk. For each OFM vintage year (2018, 2019, 2020, 2023):
+Aggregates parcel-level OFM estimates to the control-area level using the OFM parcelâ€“control area crosswalk. For each OFM vintage year (2018, 2019, 2020, 2023):
 
 * Merges parcel data with the crosswalk (validates that every parcel has a <code>control_id</code>).
-* Renames OFM columns to standardized prefixes: <code>total_pop</code>→<code>ofm_total_pop</code>, <code>household_pop</code>→<code>ofm_hhpop</code>, <code>housing_units</code>→<code>ofm_units</code>, <code>occupied_housing_units</code>→<code>ofm_hh</code>, <code>group_quarters</code>→<code>ofm_gq</code>.
+* Renames OFM columns to standardized prefixes: <code>total_pop</code>â†’<code>ofm_total_pop</code>, <code>household_pop</code>â†’<code>ofm_hhpop</code>, <code>housing_units</code>â†’<code>ofm_units</code>, <code>occupied_housing_units</code>â†’<code>ofm_hh</code>, <code>group_quarters</code>â†’<code>ofm_gq</code>.
 * Sums by <code>control_id</code>.
 
 Outputs: <code>ofm_parcelized_[year]_by_control_area</code> tables.
@@ -230,10 +230,10 @@ Outputs: <code>ofm_parcelized_[year]_by_control_area</code> tables.
 
 <code>control_totals.steps.data_loading.prepare_block_data</code>
 
-Aggregates decennial census block data to the control-area level using the block–control area crosswalk:
+Aggregates decennial census block data to the control-area level using the blockâ€“control area crosswalk:
 
 * Sums census population, housing units, households, and group quarters by <code>control_id</code>.
-* Derives <code>dec_hhpop = dec_total_pop − dec_gq</code>.
+* Derives <code>dec_hhpop = dec_total_pop âˆ’ dec_gq</code>.
 
 Output: <code>decennial_by_control_area</code>.
 
@@ -266,7 +266,7 @@ Adjusts raw county growth-change targets so they are relative to the 2023 base y
 # '''Combines''' targets from all county files for a given type.
 # '''Sums''' base-year estimates (OFM for population/units, employment tables for jobs) to the target-area level using the control-target crosswalk.
 # '''Calculates''' the estimated change between the target start year and the base year.
-# '''Subtracts''' that change from the raw target: <code>adjusted_change = raw_target − estimated_base_year_change</code>.
+# '''Subtracts''' that change from the raw target: <code>adjusted_change = raw_target âˆ’ estimated_base_year_change</code>.
 # Clipped to zero (no negative growth) for OFM-based estimates.
 
 Outputs: <code>adjusted_units_change_targets</code>, <code>adjusted_total_pop_change_targets</code>, <code>adjusted_emp_change_targets</code>.
@@ -275,11 +275,11 @@ Outputs: <code>adjusted_units_change_targets</code>, <code>adjusted_total_pop_ch
 
 <code>control_totals.steps.king_cnty_targets</code>
 
-Implements the King County–specific methodology, which uses '''housing unit change''' targets combined with hard-coded household sizes, vacancy rates, and a regional household population control total:
+Implements the King Countyâ€“specific methodology, which uses '''housing unit change''' targets combined with hard-coded household sizes, vacancy rates, and a regional household population control total:
 
 # Loads input tables (decennial estimates merged with adjusted unit-change targets), filtered to King County (FIPS 53033).
 # Aggregates unit-change and population-change targets by RGID (Regional Growth ID).
-# Applies per-RGID vacancy rates (<code>king_vac</code>) to derive households from housing units: <code>hh = units × (1 − vacancy_rate)</code>.
+# Applies per-RGID vacancy rates (<code>king_vac</code>) to derive households from housing units: <code>hh = units Ã— (1 âˆ’ vacancy_rate)</code>.
 # Applies per-RGID household sizes (<code>king_hhsz</code>) to derive initial household population.
 # '''Regional factoring:''' Scales all RGIDs so that total King County household population matches the configured <code>king_hhpop_2044</code> target (2,828,620).
 # Distributes RGID-level totals back to individual target areas using decennial household-size ratios.
@@ -293,16 +293,16 @@ Output: <code>adjusted_king_targets</code>.
 
 <code>control_totals.steps.units_chg_targets</code>
 
-'''New in summer_2026.''' Calculates targets for counties using the housing-unit change methodology (Kitsap, Pierce, Snohomish — all non-King counties in this pipeline):
+'''New in summer_2026.''' Calculates targets for counties using the housing-unit change methodology (Kitsap, Pierce, Snohomish â€” all non-King counties in this pipeline):
 
 # Merges adjusted unit-change and population-change targets with base-year OFM estimates aggregated to target areas.
 # Calculates vacancy rates by RGID from OFM data.
 # Computes group quarters using REF projection GQ shares (using OFM as base data source).
 # For the targets horizon year (2044):
 #* <code>total_pop = ofm_total_pop + total_pop_chg_adj</code>
-#* <code>hhpop = total_pop − gq</code>
+#* <code>hhpop = total_pop âˆ’ gq</code>
 #* <code>units = ofm_units + units_chg_adj</code>
-#* <code>hh = units × (1 − vacancy_rate_by_rgid)</code>
+#* <code>hh = units Ã— (1 âˆ’ vacancy_rate_by_rgid)</code>
 #* <code>hhsz = hhpop / hh</code>
 # Filters to only counties configured under <code>target_types.unit_chg</code>.
 
@@ -343,11 +343,11 @@ Output: <code>adjusted_emp_change_targets_no_res_con</code>.
 
 Extends targets from the targets horizon year (2044) to the final control totals year (2050) using linear extrapolation:
 
-# '''Loads''' all adjusted target tables — population/housing (from unit-change and King County steps) and employment (from both res_con and no_res_con steps) — and merges them into a single DataFrame.
+# '''Loads''' all adjusted target tables â€” population/housing (from unit-change and King County steps) and employment (from both res_con and no_res_con steps) â€” and merges them into a single DataFrame.
 # For each indicator (hh, total_pop, emp):
-#* Computes annual change: <code>(target_year_value − base_year_value) / years_elapsed</code>
+#* Computes annual change: <code>(target_year_value âˆ’ base_year_value) / years_elapsed</code>
 #* Annual change is clipped to zero (no negative growth).
-#* Extends to 2050: <code>base_year_value + annual_change × years_to_2050</code>
+#* Extends to 2050: <code>base_year_value + annual_change Ã— years_to_2050</code>
 # Calculates group quarters for the control year using REF projection GQ shares with OFM as the base data source.
 # Derives household population: <code>hhpop = gq + total_pop</code>.
 # Calculates implied household size: <code>hhsz = hhpop / hh</code>.
@@ -366,10 +366,10 @@ Assembles the final control totals table and exports it to Excel for the downstr
 #* Subtracts excluded area values from sibling control areas within the same target group.
 # '''Applies employment overrides''' from settings (<code>emp_target_overrides</code>), extrapolating overridden values to the control year.
 # '''Merges''' 2018 REF base-year OFM and employment data.
-# '''Renames columns''' to legacy-compatible names (e.g., <code>ofm_total_pop</code>→<code>TotPop23</code>, <code>hh_2050</code>→<code>HH50</code>).
+# '''Renames columns''' to legacy-compatible names (e.g., <code>ofm_total_pop</code>â†’<code>TotPop23</code>, <code>hh_2050</code>â†’<code>HH50</code>).
 # '''Derives additional fields:'''
-#* <code>TotEmpTrg_wCRnoMil = Emp44 − Emp23</code>
-#* <code>TotPopTrg = TotPop44 − TotPop23</code>
+#* <code>TotEmpTrg_wCRnoMil = Emp44 âˆ’ Emp23</code>
+#* <code>TotPopTrg = TotPop44 âˆ’ TotPop23</code>
 #* <code>GQpct50 = GQ50 / TotPop50</code>
 #* <code>PPH50 = HHpop50 / HH50</code>
 # '''Exports''' to <code>control_id_working.xlsx</code> in the data directory.
@@ -384,39 +384,24 @@ Output: <code>control_totals</code> table (HDF5) and <code>control_id_working.xl
 
 <code>control_totals.steps.parcels_capacity</code>
 
-Python replacement for the legacy R script <code>parcels_capacity.R</code>.
+Loads the parcel-level development capacity table produced outside the pipeline (FLU and lockouts capacity run):
 
-Computes development capacity at the parcel level from UrbanSim proposal and base-year building data:
-
-* '''Inputs:''' Base-year buildings and parcels from <code>lookup_path</code>, UrbanSim development project proposals and components from <code>prop_path</code>, building-sqft-per-job lookup.
+* '''Input:''' CSV at <code>prop_path</code> with one row per parcel: <code>parcel_id</code>, <code>plan_type_id</code>, <code>county_id</code>, <code>city_id</code>, <code>growth_center_id</code>, <code>control_id</code>, <code>tod_id</code>, <code>subreg_id</code>, <code>hb_hct_buffer</code>, <code>hb_tier</code>, and base-year / capacity columns for dwelling units (<code>DUbase</code>, <code>DUcapacity</code>), non-residential sqft (<code>NRSQF*</code>), job spaces (<code>JOBSP*</code>) and building sqft (<code>BLSQF*</code>).
 * '''Logic:'''
-** Imputes missing sqft_per_unit values for residential buildings (type 19 → 1000; others → 500).
-** Aggregates existing building stock (units, non-res sqft, building sqft, job capacity) to the parcel level.
-** Filters proposals: excludes MPD proposals (status_id=3), removes proposals smaller than existing stock.
-** Splits proposals into residential-only, non-residential-only, and mixed-use categories.
-** For mixed-use parcels, either samples one proposal per parcel (when <code>mu_sampling=true</code>) or applies the <code>res_ratio</code> (default 50%) to scale both residential and non-residential components.
-** Selects the maximum proposal per parcel for each use type.
-** Final capacity equals the proposed value for parcels with proposals; base-year stock for all others.
-** Updates <code>control_id</code> and <code>subreg_id</code> from the HCT parcel flags.
+** Validates that required columns exist and <code>parcel_id</code> is unique.
+** Updates <code>control_id</code> and <code>subreg_id</code> from the HCT parcel flags when the <code>parcels_hct</code> table exists.
 
 {| class="wikitable"
 ! Setting !! Value !! Description
 |-
-| <code>prop_path</code> || (network path) || Directory containing UrbanSim proposal CSVs from an unlimited run
+| <code>prop_path</code> || (network path) || Parcel-level capacity CSV file
 |-
-| <code>lookup_path</code> || (network path) || Directory containing base-year building and parcel CSVs
-|-
-| <code>res_ratio</code> || 50 || Residential share percentage for mixed-use parcels (0–100)
-|-
-| <code>mu_sampling</code> || false || Sample parcels (true) or apply ratio to units (false)
-|-
-| <code>rng_seed</code> || 1 || Random seed for reproducibility
+| <code>save_csv</code> || true || Save the output CSV to the output directory
 |-
 | <code>file_prefix</code> || CapacityPclNoSampling_res50 || Prefix of the output CSV file name
 |}
 
-Output: <code>CapacityPclNoSampling_res50.csv</code> with columns for base-year and capacity values for dwelling units, non-residential sqft, job spaces, and building sqft, along with geographic identifiers (<code>control_id</code>, <code>subreg_id</code>, <code>tod_id</code>).
-
+Output: <code>CapacityPclNoSampling_res50.csv</code> with all input columns.
 === Step 19: Create Rebased Targets & Interpolated Control Totals ===
 
 <code>control_totals.steps.create_control_totals_rebased_targets</code>
@@ -429,12 +414,12 @@ Output: <code>CapacityPclNoSampling_res50.csv</code> with columns for base-year 
 ** Infers the REF base year, base year, and target year from column naming patterns.
 ** Computes growth deltas and summarises by RGID.
 ** Derives household population and households from PPH (persons per household) and GQ (group quarters) shares.
-** '''Linearly interpolates''' between anchor years (2018 → 2023 → 2050) to fill in all stepped years (2018, 2023, 2025, 2030, 2035, 2040, 2044, 2050).
+** '''Linearly interpolates''' between anchor years (2018 â†’ 2023 â†’ 2050) to fill in all stepped years (2018, 2023, 2025, 2030, 2035, 2040, 2044, 2050).
 ** Optionally scales interpolated values to match a regional REF projection (<code>scale_to_ref: false</code> in this configuration).
 ** Produces unrolled long-format output and annual regional summaries.
 * '''Outputs:'''
-** <code>TargetsRebasedOutput.xlsx</code> — Rebased targets with sheets for RGs, CityPop, CityHH, CityEmp.
-** <code>Control-Totals-LUVit.xlsx</code> — Interpolated control totals for all stepped years.
+** <code>TargetsRebasedOutput.xlsx</code> â€” Rebased targets with sheets for RGs, CityPop, CityHH, CityEmp.
+** <code>Control-Totals-LUVit.xlsx</code> â€” Interpolated control totals for all stepped years.
 ** Pipeline HDF5 tables for all indicator sheets and unrolled data.
 
 === Step 20: Load Split HCT Base Data ===
@@ -459,11 +444,11 @@ Output: <code>split_hct_base_data_2023</code>.
 
 * '''Inputs:''' <code>Control-Totals-LUVit.xlsx</code> (from Step 19), <code>CapacityPclNoSampling_res50.csv</code> (parcel capacity), base-year split data (from Step 20).
 * '''Logic:'''
-** '''Loads targets''' — Reads HH, Emp, and HHPop sheets from the control-totals workbook and computes derived columns (persons-per-household ratios, population growth).
-** '''Loads capacity''' — Reads parcel-level capacity CSV, computes total capacity (max of base and proposed), and aggregates to the split/no-split geography level.
-** '''Prepares base data''' — Enriches base data with within-geography group totals, merges base-year values from the control-totals sheets, and flags TOD areas (<code>is_tod = split_geo_id ≠ nosplit_geo_id</code>).
-** '''Creates generators''' — Builds per-indicator generator DataFrames with PPH ratios for HH, and merges geography-level capacity data for HH and Emp.
-** '''Iterative split algorithm''' — For each indicator (HH, Emp, HHPop):
+** '''Loads targets''' â€” Reads HH, Emp, and HHPop sheets from the control-totals workbook and computes derived columns (persons-per-household ratios, population growth).
+** '''Loads capacity''' â€” Reads parcel-level capacity CSV, computes total capacity (max of base and proposed), and aggregates to the split/no-split geography level.
+** '''Prepares base data''' â€” Enriches base data with within-geography group totals, merges base-year values from the control-totals sheets, and flags TOD areas (<code>is_tod = split_geo_id â‰  nosplit_geo_id</code>).
+** '''Creates generators''' â€” Builds per-indicator generator DataFrames with PPH ratios for HH, and merges geography-level capacity data for HH and Emp.
+** '''Iterative split algorithm''' â€” For each indicator (HH, Emp, HHPop):
 **# Computes initial TOD growth based on capacity shares.
 **# Sets non-TOD growth as the residual.
 **# Redirects overflow when non-TOD growth exceeds capacity.
@@ -505,13 +490,13 @@ Output: <code>split_hct_base_data_2023</code>.
 
 <code>control_totals.steps.subregionalCTs</code>
 
-Python port of <code>r_scripts/subregionalCTs.R</code>. Distributes the per-(subreg, year) household control totals produced by <code>split_ct_to_hct</code> into UrbanSim persons-per-household (PPH) bins 1–7, and produces the final subregional household/employment control-total tables:
+Python port of <code>r_scripts/subregionalCTs.R</code>. Distributes the per-(subreg, year) household control totals produced by <code>split_ct_to_hct</code> into UrbanSim persons-per-household (PPH) bins 1â€“7, and produces the final subregional household/employment control-total tables:
 
 # Reads <code>split_ct_unrolled</code> (subregional, from Step 21) and <code>split_ct_unrolled_regional</code>, filtered to <code>year >= base_year</code>.
-# Builds a <code>subreg_id → county_id</code> crosswalk from <code>current_parcel_control_area_xwalk</code> and <code>control_target_xwalk</code>.
-# Loads the <code>borrow_distribution</code> table — for small/no-data geographies, borrows another area's PPH distribution (normalized and rescaled to the recipient's own household control).
+# Builds a <code>subreg_id â†’ county_id</code> crosswalk from <code>current_parcel_control_area_xwalk</code> and <code>control_target_xwalk</code>.
+# Loads the <code>borrow_distribution</code> table â€” for small/no-data geographies, borrows another area's PPH distribution (normalized and rescaled to the recipient's own household control).
 # Loads the cached PPH base tables produced by Step 20 (<code>subreg_hh_by_pph_[base_year]</code>, <code>subreg_mean_pph_[base_year]</code>, <code>subreg_mean_pph_county_[base_year]</code>).
-# Builds a <code>(subreg_id × year × pph)</code> grid seeded with base-year counts, using subreg-level (or county-level fallback) average PPH for the 7+ bin.
+# Builds a <code>(subreg_id Ã— year Ã— pph)</code> grid seeded with base-year counts, using subreg-level (or county-level fallback) average PPH for the 7+ bin.
 # '''Iteratively rebalances''' each subregion/year using the same PPH-allocation algorithm as the regional step (see below), grouped per <code>subreg_id</code> instead of globally.
 # Builds UrbanSim control-total rows: household output splits by PPH bin only (no income/worker split); employment output is a single row per (subreg, year) with no sector/home-based split.
 # For any year present in the regional totals but not covered by the subregional split, builds fallback rows tagged <code>subreg_id = -1</code> using the regional totals directly.
@@ -524,10 +509,10 @@ Output: <code>subregionalCTs_hh</code>, <code>subregionalCTs_emp</code>; CSVs wr
 
 Python port of <code>r_scripts/regionalCTs.R</code>. Disaggregates the '''regional''' aggregate household/household-population forecast (<code>split_ct_unrolled_regional</code>, from Step 21) into UrbanSim-format bins by PPH, workers, and income:
 
-# Queries the UrbanSim parcel base-year MySQL database for base-year households grouped by capped PPH (1–7), capped workers (0–4), and income bracket (from <code>regional_cts.income_bins</code>/<code>income_labels</code>).
-# Builds a <code>(year × pph)</code> grid seeded with base-year household counts.
-# '''Iteratively rebalances''' PPH bins each year using '''Larry Blain's two-ratio formula''': splits PPH into "small" (&lt;3) and "large" (≥3) groups, solves two linear ratios per year so aggregate household count and household population match the forecast controls, then alternates subtracting excess population from the 7+ bin and weighted random ±1-household shifts between bins 1–6 until totals match exactly (up to <code>max_outer_iterations</code>, default 20).
-# Expands the PPH grid to <code>(year × pph × workers × income)</code> using base-year worker/income shares within each PPH bin.
+# Queries the UrbanSim parcel base-year MySQL database for base-year households grouped by capped PPH (1â€“7), capped workers (0â€“4), and income bracket (from <code>regional_cts.income_bins</code>/<code>income_labels</code>).
+# Builds a <code>(year Ã— pph)</code> grid seeded with base-year household counts.
+# '''Iteratively rebalances''' PPH bins each year using '''Larry Blain's two-ratio formula''': splits PPH into "small" (&lt;3) and "large" (â‰¥3) groups, solves two linear ratios per year so aggregate household count and household population match the forecast controls, then alternates subtracting excess population from the 7+ bin and weighted random Â±1-household shifts between bins 1â€“6 until totals match exactly (up to <code>max_outer_iterations</code>, default 20).
+# Expands the PPH grid to <code>(year Ã— pph Ã— workers Ã— income)</code> using base-year worker/income shares within each PPH bin.
 # Builds UrbanSim household control-total rows (<code>income_min/max</code>, <code>persons_min/max</code>, <code>workers_min/max</code>) for <code>year > base_year</code>.
 # If <code>create_emp_totals: true</code>, loads a source employment control-total table from MySQL (<code>regional_cts.emp_ct_table</code>), computes sector/home-based-status shares per year, and applies them to the regional job-count forecast (using <code>saferound</code> to avoid rounding drift), or copies raw job counts if <code>scale_emp_controls: false</code>.
 
@@ -537,15 +522,15 @@ Output: <code>regionalCTs_hh</code> (name from <code>regional_cts.output_table</
 
 <code>control_totals.steps.output_control_totals</code>
 
-Final step — combines the subregional and regional household/employment control totals into UrbanSim-format "allocation" tables and publishes them:
+Final step â€” combines the subregional and regional household/employment control totals into UrbanSim-format "allocation" tables and publishes them:
 
 # Filters subregional rows to <code>year > base_year</code>, and splits them into "LUVit" years (<code>subreg_id != -1</code>, actually disaggregated to subregions/HCT) vs. "non-LUVit" years (<code>subreg_id == -1</code>, the regional-fallback rows built in Step 22).
 # For non-LUVit years, substitutes rows from the '''regional''' control-total table instead, so the combined "allocation" table always has a row for every year.
 # Writes the combined allocation table (household/employment) to '''pipeline.h5''' under <code>output_control_totals.allocation_control_totals_hh</code>/<code>_emp</code> (default <code>annual_household_control_totals</code>/<code>annual_employment_control_totals</code>), and separately writes the '''pure regional''' table under <code>simulation_control_totals_hh</code>/<code>_emp</code> (default <code>annual_household_control_totals_region</code>/<code>_region</code>) for UrbanSim's regional-simulation mode.
 # If <code>save_to_csv: true</code>, writes all four tables to <code>output_dir</code> as CSV.
-# If <code>save_to_mysql: true</code>, connects to the MySQL database named in <code>output_control_totals.mysql_db</code> and writes all four tables via <code>to_sql(..., if_exists='replace')</code> — this '''replaces''' any existing table of that name in the target database.
+# If <code>save_to_mysql: true</code>, connects to the MySQL database named in <code>output_control_totals.mysql_db</code> and writes all four tables via <code>to_sql(..., if_exists='replace')</code> â€” this '''replaces''' any existing table of that name in the target database.
 
-Output: <code>annual_household_control_totals</code>, <code>annual_employment_control_totals</code>, <code>annual_household_control_totals_region</code>, <code>annual_employment_control_totals_region</code> — written to pipeline.h5 (always), CSV, and/or MySQL depending on settings.
+Output: <code>annual_household_control_totals</code>, <code>annual_employment_control_totals</code>, <code>annual_household_control_totals_region</code>, <code>annual_employment_control_totals_region</code> â€” written to pipeline.h5 (always), CSV, and/or MySQL depending on settings.
 
 ----
 
