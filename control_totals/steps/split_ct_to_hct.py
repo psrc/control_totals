@@ -840,7 +840,9 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 		while indicator != 'HHPop' and todshare[indicator] < trgshare[indicator] and counter <= max_iterations:
 			df['remcap'] = np.maximum(0, df['netcap'] - df['wtrg'])
 			df['true_remcap'] = df['remcap']
-			maxed_out = df['is_tod'] & (np.abs(100 - df['target.share'] - df['minshare']) <= 0.0001)
+			# HCT areas at their max share get no more capacity weight
+			# (tolerance of half the 0.1 rounding unit of target.share)
+			maxed_out = df['is_tod'] & (df['target.share'] >= 100 - df['minshare'] - 0.05)
 			df.loc[maxed_out, 'remcap'] = 0
 
 			total_remaining = df.loc[df['is_tod'], 'remcap'].sum()

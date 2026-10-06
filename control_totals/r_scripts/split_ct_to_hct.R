@@ -361,7 +361,7 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
             CTdf[[ind]][geonetcap < trggrowth, minshare := 0]
             
             # if HCT is already above the max share, keep it at that level
-            CTdf[[ind]][is_tod == TRUE & (100 - capshare) < minshare,  minshare := round(pmin(minshare, 100 - capshare), 1)]
+            CTdf[[ind]][is_tod == TRUE & (100 - capshare) < minshare,  minshare := pmin(minshare, 100 - capshare)]
         } 
         # compute regional HCT shares
         if(ind == "HH") {
@@ -397,7 +397,9 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
         while(ind != "HHPop" && todshare[[ind]] < trgshare[[ind]]) {
             # compute remaining capacity
             df[, remcap := pmax(0, netcap - wtrg)][, true_remcap := remcap]
-            df[is_tod == TRUE & abs(100 - target.share - minshare) <= 0.0001, remcap := 0]
+            # HCT areas at their max share get no more capacity weight
+            # (tolerance of half the 0.1 rounding unit of target.share)
+            df[is_tod == TRUE & target.share >= 100 - minshare - 0.05, remcap := 0]
             
             # compute shares of remaining regional HCT capacity
             df[is_tod == TRUE, todcap.share := remcap/sum(remcap)]
