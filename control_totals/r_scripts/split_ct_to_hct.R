@@ -12,7 +12,7 @@
 # The also script requires a parcel capacity file generated via
 # https://github.com/psrc/urbansimRtools/blob/master/capacity/parcels_capacity.R
 #
-# Hana Sevcikova, PSRC, updated on 2025/06/16
+# Hana Sevcikova, PSRC, updated on 2026/10/06
 ##################################################
 
 library(data.table)
@@ -35,18 +35,26 @@ get_script_dir <- function() {
 }
 setwd(get_script_dir())
 
+data.dir <- ''
+data.dir <- '~/T/60day-TEMP/James/split_hct_inputs'
+base.share.dir <- 'inputs' # where is the file with base shares
+#base.share.dir <- data.dir
+
 # Full name of the input file containing the control totals (sheets with not unrolled CTs)
 # This is the output of run_creating_control_totals_from_targets.R from the link above
 #CT.file <- '~/psrc/R/control-total-vision2050/Control-Totals-LUVit-2022-11-15.xlsx' # BY 2018
 CT.file <- 'Control-Totals-LUVit.xlsx' # BY 2023
+CT.file <- file.path(data.dir, CT.file)
 
 # parcel-level capacity file
 # generated via https://github.com/psrc/urbansimRtools/blob/master/capacity/parcels_capacity.R
 #capacity.file <- '~/psrc/R/urbansimRtools/capacity/CapacityPcl_res50-2023-01-11.csv' # BY 2018
 #capacity.file <- '~/psrc/R/urbansimRtools/capacity/CapacityPclNoSampling_res50-2025-06-03.csv' # BY 2023
 capacity.file <- 'CapacityPclNoSampling_res50.csv'
-  
+capacity.file <-   file.path(data.dir, capacity.file)
+
 output.dir <- "C:/Users/jkolberg/PythonProjects/control_totals/examples/legacy_luvit/output"
+output.dir <- "outputs"
 output.suffix <- paste0("-", Sys.Date())  # uniquely identify results from this split  
 # output.suffix <- paste0("_hb1110-", Sys.Date()) 
 
@@ -54,9 +62,9 @@ save.results <- TRUE      # should results be stored in an Excel file
 results.file.name.prefix <- file.path(output.dir, paste0("LUVit_ct_by_tod_generator", output.suffix))  # only used if save.results is TRUE
 do.plot <- TRUE           # should plots be created
 
-base.year <- 2020
+base.year <- 2023
 base.year.in.targets <- base.year # from which base year to start in the targets file (for BY 2018 this should be 2020)
-parcel.base.year <- 2018
+parcel.base.year <- 2023
 target.year <- 2050       # what is the target year in the targets file    
 aggregate.no.growth.areas <- FALSE
 
@@ -69,6 +77,9 @@ geo.name.nosplit <- "control_id"
 
 trgshare <- list(HH = 65, Emp = 75, HHPop = NA) # Regional shares to achieve (HHPop is derived from HH and it is usually a little higher)
 
+# Factor to multiply the net capacity (can be used if we know that the capacity is over/underestimated) 
+netcap.factor <- 0.9
+
 # Scenarios are defined as the minimum growth shares in non-HCT areas (for RGs 1, 2, 3)
 # E.g. c(10, 10, 10) means the growth into HCT areas cannot be more than 90% 
 # (unless the capacity share is higher) for all types of RGs.
@@ -78,14 +89,15 @@ scenarios <- list(list(HH = c(10, 10, 10), Emp = c(10, 10, 10), HHPop = NA)#,
 
 step <- c(1, 0.5, 0.25) # increments for scaling the iterative increase for RGs 1, 2, 3 (i.e. RG=1 grows the fastest)
 
-use.mysql <- TRUE  # if FALSE, base data are taken from base.data.file. 
+use.mysql <- FALSE  # if FALSE, base data are taken from base.data.file. 
                    # Set this to TRUE if run for the first time or if there is change in the DB.
 base.db <- paste0(parcel.base.year, "_parcel_baseyear") # used if use.mysql is TRUE
 
-save.base.data <- TRUE # should the base data pulled from mysql be saved. 
+save.base.data <- FALSE # should the base data pulled from mysql be saved. 
                         # Set this to TRUE if use.mysql is TRUE. It allows to 
                         # skip the mysql step next time around. 
-base.data.file <- file.path("inputs", paste0("base_data_shares_", base.year, ".rda")) # where to store or load from the base data
+base.data.file <- file.path(base.share.dir, paste0("base_data_shares_", base.year, ".rda")) # where to store or load from the base data
+#base.data.file <- file.path(base.share.dir, paste0("base_year_data_", base.year, "_for_CT.rda")) # where to store or load from the base data
 
 if((save.results || do.plot) && !dir.exists(output.dir))
     dir.create(output.dir, recursive = TRUE)
@@ -93,7 +105,7 @@ if((save.results || do.plot) && !dir.exists(output.dir))
 ## Functions
 ###############
 # Connecting to Mysql
-mysql.connection <- function(dbname = "2018_parcel_baseyear") {
+mysql.connection <- function(dbname = "2023_parcel_baseyear") {
     # credentials can be stored in a file (as one column: username, password, host)
     # or supplied via environment variables URBANSIM_MYSQL_USER /
     # URBANSIM_MYSQL_PASSWORD / URBANSIM_MYSQL_HOST.
@@ -184,6 +196,7 @@ if(use.mysql) {
     cat("\nLoading Xwalk tables")
     qr <- dbSendQuery(mydb, "select * from controls")
     geos <- unique(data.table(fetch(qr, n = -1)))
+    geos[, county_id := as.integer(county_id)]
     dbClearResult(qr)
     setnames(geos, c(geo.name.nosplit, "control_name"), c("nosplit_geo_id", "name"))
 
@@ -242,7 +255,7 @@ merge.with.capacity <- function(df, cap.df, what){
     setnames(cap.df, paste0(what, "totcap"), "totcap")
     df[cap.df, totcap := i.totcap, on = c("split_geo_id", "nosplit_geo_id")]
     df[is.na(totcap), totcap := 0]
-    df[, netcap := pmax(0, totcap - base)]
+    df[, netcap := netcap.factor * pmax(0, totcap - base)]
     df[, geonetcap := sum(netcap), by = "nosplit_geo_id"][, capshare := netcap/geonetcap*100]
     df[(is.infinite(capshare) | is.na(capshare)) & is_tod == TRUE, capshare := 100]
     df[(is.infinite(capshare) | is.na(capshare)) & is_tod == FALSE, capshare := 0]
@@ -457,7 +470,7 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
         #df[, control_id := geo_id]
         #df[is_tod == TRUE, control_id := control_id + 1000]
         
-        # compute total HCT shares for each TOD 
+        # compute total HCT shares for each RG
         todshare.bytod <- df[is_tod == TRUE, sum(wtrg), by = "RGid"]
         todshare.bytod[df[, sum(wtrg, na.rm = TRUE), by = "RGid"][RGid %in% 1:3], share := V1/i.V1 * 100, on = "RGid"]
         
@@ -556,7 +569,7 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
     # generate plots
     if(do.plot){
         # evolution of HCT shares over all iterations
-        RGdf <- data.table(RGid = c(1:3, -1), RG = c("Metro", "Core Cities", "HCT Comm", "Region"))
+        RGdf <- data.table(RGid = c(1:3, -1), RG = c("Metro", "Core Cities", "Larger Cities", "Region"))
         for(ind in c("HH", "Emp")){
             if(! ind %in% names(dat.for.bars))
                 dat.for.bars[[ind]] <- list()
@@ -567,12 +580,12 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
             dat[RGdf, RG := i.RG, on = "RGid"]
             dat[, RG := factor(RG, levels = RGdf$RG)]
             g <- ggplot(dat[!is.na(target.share)], aes(x = iter)) + geom_line(aes(y = target.share, col = factor(nosplit_geo_id))) + 
-                xlab("iteration") + ylab("target TOD share") + facet_wrap(. ~ RG, ncol = 2) 
+                xlab("iteration") + ylab("target HCT share") + facet_wrap(. ~ RG, ncol = 2) 
             g <- g + geom_text(data = dat[!is.na(target.share) & iter == 0], aes(x = iter, y = target.share, label = name, 
                                                                                  col = factor(nosplit_geo_id), hjust = 0, vjust = 1.5), size = 2.3) + theme(legend.position="none")
             
             g2 <- ggplot(dat[!is.na(todcap.share)], aes(x = iter)) + geom_line(aes(y = todcap.share, col = factor(nosplit_geo_id))) + 
-                xlab("iteration") + ylab("remaining TOD capacity share") + facet_wrap(. ~ RG) 
+                xlab("iteration") + ylab("remaining HCT capacity share") + facet_wrap(. ~ RG) 
             g2 <- g2 + geom_text(data = dat[!is.na(todcap.share) & iter == 1], aes(x = iter, y = todcap.share, label = name, 
                                                                                    col = factor(nosplit_geo_id), hjust = 0, vjust = 1.5), size = 3) + theme(legend.position="none")
             
