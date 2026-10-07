@@ -1,5 +1,5 @@
-from util.elmer_helpers import read_from_elmer_geo, read_from_elmer
-from util import Pipeline
+from control_totals.util.elmer_helpers import read_from_elmer_geo, read_from_elmer
+from control_totals.util import Pipeline
 
 
 def copy_elmer_geo_to_hdf5(pipeline):

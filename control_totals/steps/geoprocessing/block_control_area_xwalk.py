@@ -1,6 +1,6 @@
 import pandas as pd
 import geopandas as gpd
-from util import Pipeline
+from control_totals.util import Pipeline
 
 
 def create_block_control_area_xwalk(pipeline,gdf_name):

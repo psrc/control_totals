@@ -1,4 +1,4 @@
-from util import Pipeline,load_base_year_emp
+from control_totals.util import Pipeline,load_base_year_emp
 
 
 def load_targets(pipeline):

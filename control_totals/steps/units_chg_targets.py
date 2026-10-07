@@ -1,5 +1,5 @@
 import pandas as pd
-from util import Pipeline, calc_gq
+from control_totals.util import Pipeline, calc_gq
 
 
 def load_tables(pipeline):

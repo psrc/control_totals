@@ -1,5 +1,5 @@
 import pandas as pd
-from util import Pipeline
+from control_totals.util import Pipeline
 
 
 def combine_targets(pipeline, target_type):

@@ -1,5 +1,5 @@
 import pandas as pd
-from util import Pipeline
+from control_totals.util import Pipeline
 
 
 def sum_decennial_by_control_area(pipeline):

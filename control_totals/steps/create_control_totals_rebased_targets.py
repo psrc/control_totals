@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import Pipeline
+from control_totals.util import Pipeline
 
 
 def _normalize_year(year_token):

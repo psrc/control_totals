@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from util import Pipeline
+from control_totals.util import Pipeline
 
 
 def run_step(context):

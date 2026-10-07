@@ -1,6 +1,6 @@
 import pandas as pd
 import geopandas as gpd
-from util import Pipeline
+from control_totals.util import Pipeline
 
 
 def load_shapefiles_to_hdf5(pipeline):

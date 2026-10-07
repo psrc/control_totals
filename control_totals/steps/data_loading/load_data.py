@@ -3,7 +3,7 @@ import shutil
 
 import pandas as pd
 
-from util import Pipeline
+from control_totals.util import Pipeline
 
 
 def get_required_input_files(pipeline):

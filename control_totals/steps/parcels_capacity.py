@@ -1,6 +1,6 @@
 import pandas as pd
 from pathlib import Path
-from util import Pipeline
+from control_totals.util import Pipeline
 
 BASE_CAPACITY_COLUMNS = [
     'DUbase', 'DUcapacity',

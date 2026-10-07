@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
 
-from util import Pipeline
+from control_totals.util import Pipeline
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

@@ -1,6 +1,6 @@
 import numpy as np
 import geopandas as gpd
-from util import Pipeline
+from control_totals.util import Pipeline
 
 def create_parcel_control_hct_xwalk(parcel_pts, control_hct):
     """Create a crosswalk between parcels and control HCT.

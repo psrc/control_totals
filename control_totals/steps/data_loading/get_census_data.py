@@ -1,5 +1,5 @@
 import os
-from util import Pipeline, CensusApi
+from control_totals.util import Pipeline, CensusApi
 
 
 def get_dec_block_data(pipeline):

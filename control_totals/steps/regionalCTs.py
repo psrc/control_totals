@@ -33,11 +33,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import Pipeline, get_mysql_engine, get_mysql_config
-from util.db_helpers import DEFAULT_USER_ENV, DEFAULT_PASSWORD_ENV, DEFAULT_HOST_ENV
-from util import ct_allocation
-from util.ct_allocation import INCOME_BINS as DEFAULT_INCOME_BINS
-from util.ct_allocation import INCOME_LABELS as DEFAULT_INCOME_LABELS
+from control_totals.util import Pipeline, get_mysql_engine, get_mysql_config
+from control_totals.util.db_helpers import DEFAULT_USER_ENV, DEFAULT_PASSWORD_ENV, DEFAULT_HOST_ENV
+from control_totals.util import ct_allocation
+from control_totals.util.ct_allocation import INCOME_BINS as DEFAULT_INCOME_BINS
+from control_totals.util.ct_allocation import INCOME_LABELS as DEFAULT_INCOME_LABELS
 
 
 # ---------------------------------------------------------------------------

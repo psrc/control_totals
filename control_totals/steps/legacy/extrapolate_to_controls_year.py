@@ -1,5 +1,5 @@
 import pandas as pd
-from util import Pipeline, calc_gq
+from control_totals.util import Pipeline, calc_gq
 
 def filter_targets_type(p, df, target_type):
     """Filter a targets DataFrame to counties that use a given target type.
