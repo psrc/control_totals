@@ -197,17 +197,11 @@ census_variables:
 # GDB layers
 #----------------------------
 gdb_layers:
-  # - name: control_areas
-  #   file: Q:/Projects/2023_Baseyear/Political/control_geographies/control.gdb
-  #   layer: control26
-  # - name: control_hct
-  #   file: Q:/Projects/2023_Baseyear/Political/control_geographies/control.gdb
-  #   layer: control_hct26
   - name: control_areas
-    file: C:/Users/jkolberg/PythonProjects/PSRC/control_total_geography/projects/luvit_hcts/output/control.gdb
+    file: Q:/Projects/2023_Baseyear/Political/control_geographies/control.gdb
     layer: control26
   - name: control_hct
-    file: C:/Users/jkolberg/PythonProjects/PSRC/control_total_geography/projects/luvit_hcts/output/control.gdb
+    file: Q:/Projects/2023_Baseyear/Political/control_geographies/control.gdb
     layer: control_hct26
 
 
@@ -338,14 +332,14 @@ emp_tables_backup_dir: J:/Confid/Emp/Internal_Support/James
 # Pypyr steps
 #----------------------------
 steps:
-#  - steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
-#  - steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
+ - steps.data_loading.initialize_hdf5 # deletes existing hdf5 file
+ - steps.data_loading.get_elmer_data # pulls data from elmer database and saves to hdf5
  - steps.data_loading.load_gdb_layers # loads layers from gdb into hdf5
  - steps.geoprocessing.parcel_control_hct_xwalk # creates parcel to control_hct crosswalk
  - steps.data_loading.load_data # loads data from csv files into hdf5
  - steps.geoprocessing.block_control_area_xwalk # creates block to control area crosswalk
  - steps.geoprocessing.parcel_control_area_xwalks # creates parcel to control area crosswalk
-#  - steps.data_loading.get_census_data # pulls decennial census data from api and saves to hdf5
+ - steps.data_loading.get_census_data # pulls decennial census data from api and saves to hdf5
  - steps.data_loading.prepare_parcel_data # aggregates parcel data to control area
  - steps.data_loading.prepare_block_data # aggregates decennial block data to control area
 
@@ -358,12 +352,12 @@ steps:
  - steps.extrapolate_to_controls_year # extrapolates out to the control totals end year from the targets end year
  - steps.create_controls # creates final control totals table by bringing in the non-growth areas
 
-#  - steps.parcels_capacity # calculates capacities
+ - steps.parcels_capacity # calculates capacities
  - steps.create_control_totals_rebased_targets # creates rebased targets and interpolated control totals in Python
-#  - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
+ - steps.load_split_hct_base_data # loads split HCT base data from mysql into pipeline.h5
  - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
-#  - steps.subregionalCTs # distributes city CTs by PPH and rebalances to controls
-#  - steps.regionalCTs # distributes regional CTs by PPH/workers/income and rebalances to controls
+ - steps.subregionalCTs # distributes city CTs by PPH and rebalances to controls
+ - steps.regionalCTs # distributes regional CTs by PPH/workers/income and rebalances to controls
 #  - steps.output_control_totals # combines subregional and regional CTs and outputs to MySQL, pipeline.h5, and csv
 
 #  - steps.calculate_units_for_dashboard # calculates units for dashboard based on hct split control totals and parcel capacity
