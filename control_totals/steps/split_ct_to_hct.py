@@ -1456,7 +1456,8 @@ def run_step(context):
 			write_workbook(cts, output_path)
 
 		if save_plots:
-			save_split_plots(split_result['weights'], output_dir / 'plots', scenario_suffix)
+			today = pd.Timestamp.today().strftime('%Y-%m-%d')
+			save_split_plots(split_result['weights'], output_dir / f'plots_{today}', scenario_suffix)
 
 		save_pipeline_outputs(pipeline, cts, scenario_suffix if len(scenarios) > 1 else 'default')
 
