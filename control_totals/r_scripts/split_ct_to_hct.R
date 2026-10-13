@@ -36,7 +36,8 @@ get_script_dir <- function() {
 setwd(get_script_dir())
 
 data.dir <- ''
-data.dir <- '~/T/60day-TEMP/James/split_hct_inputs'
+#data.dir <- '~/T/60day-TEMP/James/split_hct_inputs'
+data.dir <- 'inputs'
 base.share.dir <- 'inputs' # where is the file with base shares
 #base.share.dir <- data.dir
 
@@ -50,7 +51,8 @@ CT.file <- file.path(data.dir, CT.file)
 # generated via https://github.com/psrc/urbansimRtools/blob/master/capacity/parcels_capacity.R
 #capacity.file <- '~/psrc/R/urbansimRtools/capacity/CapacityPcl_res50-2023-01-11.csv' # BY 2018
 #capacity.file <- '~/psrc/R/urbansimRtools/capacity/CapacityPclNoSampling_res50-2025-06-03.csv' # BY 2023
-capacity.file <- 'CapacityPclNoSampling_res50.csv'
+#capacity.file <- 'CapacityPclNoSampling_res50.csv'
+capacity.file <- 'CapacityPclFLU_res50_flu-2026-09-30_2026-10-13.csv'
 capacity.file <-   file.path(data.dir, capacity.file)
 
 output.dir <- "C:/Users/jkolberg/PythonProjects/control_totals/examples/legacy_luvit/output"
@@ -67,6 +69,18 @@ base.year.in.targets <- base.year # from which base year to start in the targets
 parcel.base.year <- 2023
 target.year <- 2050       # what is the target year in the targets file    
 aggregate.no.growth.areas <- FALSE
+
+# Should growth be measured from the urbansim base data, so that the horizon-year
+# levels match the control totals? If FALSE, the control-total growth increment
+# (target - base in the targets file) is kept instead (legacy behavior).
+# If TRUE, the split is also run for targets.end.year, which is then used as an
+# additional interpolation anchor.
+preserve.target.level <- TRUE
+targets.end.year <- 2044  # year for which growth targets are set
+
+# Indicators whose target is floored at the base level, so that a control area
+# holds flat instead of declining. Set to c() for no flooring (legacy behavior).
+prevent.negative.growth <- c("HH", "HHPop", "Emp")
 
 # Should interpolated numbers be rounded
 round.interpolated <- FALSE
@@ -89,11 +103,11 @@ scenarios <- list(list(HH = c(10, 10, 10), Emp = c(10, 10, 10), HHPop = NA)#,
 
 step <- c(1, 0.5, 0.25) # increments for scaling the iterative increase for RGs 1, 2, 3 (i.e. RG=1 grows the fastest)
 
-use.mysql <- FALSE  # if FALSE, base data are taken from base.data.file. 
+use.mysql <- TRUE  # if FALSE, base data are taken from base.data.file. 
                    # Set this to TRUE if run for the first time or if there is change in the DB.
 base.db <- paste0(parcel.base.year, "_parcel_baseyear") # used if use.mysql is TRUE
 
-save.base.data <- FALSE # should the base data pulled from mysql be saved. 
+save.base.data <- TRUE # should the base data pulled from mysql be saved. 
                         # Set this to TRUE if use.mysql is TRUE. It allows to 
                         # skip the mysql step next time around. 
 base.data.file <- file.path(base.share.dir, paste0("base_data_shares_", base.year, ".rda")) # where to store or load from the base data
@@ -150,12 +164,33 @@ ct.pop <- data.table(read.xlsx(CT.file, sheet = "HHPop"))
 setnames(ct.pop, c(geo.name.nosplit, as.character(base.year.in.targets), as.character(target.year)), 
          c("nosplit_geo_id", "base", "target"))
 
-targets <- list(HH = ct.hh[, .(nosplit_geo_id, base, target = round(target))], # order of the list items is important (HH must be first)
-                Emp = ct.emp[, .(nosplit_geo_id, base, target = round(target))],
-                HHPop = ct.pop[, .(nosplit_geo_id, base, target = round(target))])
-targets[["HH"]][ , `:=`(trg.pph = targets[["HHPop"]][ , (target-base)]/(target-base), 
-                        trg.pop = targets[["HHPop"]][ , target] - targets[["HHPop"]][ , base])]
-targets[["HH"]][is.na(trg.pph), trg.pph := 0]
+
+# Read the HH, Emp and HHPop targets for a given target year.
+# Returns a list with tables nosplit_geo_id, base, target (HH must be first).
+read.targets <- function(trg.year) {
+    trgs <- list()
+    for(sheet in c("HH", "Emp", "HHPop")) {
+        ct <- data.table(read.xlsx(CT.file, sheet = sheet))
+        setnames(ct, c(geo.name.nosplit, as.character(base.year.in.targets), as.character(trg.year)), 
+                 c("nosplit_geo_id", "base", "target"))
+        trgs[[sheet]] <- ct[, .(nosplit_geo_id, base, target)]
+    }
+    add.target.pph(trgs)
+}
+
+# (Re)compute the targeted growth in persons per household and HH population on the HH table
+add.target.pph <- function(trgs) {
+    hh.growth <- trgs[["HH"]][, target - base]
+    pop.growth <- trgs[["HHPop"]][, target - base]
+    trgs[["HH"]][, `:=`(trg.pph = ifelse(hh.growth == 0, 0, pop.growth/hh.growth), trg.pop = pop.growth)]
+    trgs[["HH"]][is.na(trg.pph), trg.pph := 0]
+    trgs
+}
+
+targets <- read.targets(target.year)
+# targets for the growth-targets horizon, used as an additional interpolation anchor
+mid.targets <- if(preserve.target.level && targets.end.year != target.year) read.targets(targets.end.year) else NULL
+
 
 # read capacity file
 pcl.cap <- fread(capacity.file)
@@ -266,10 +301,33 @@ CTgen.emp<- merge.with.capacity(copy(CTgen.emp), copy(geo.cap), what = "EMP")
 
 CTgens <- list(HH = CTgen.hh, Emp = CTgen.emp, HHPop = CTgen.pop)
 
-dat.for.bars <- list() 
-for(min.share in scenarios) { #  iterate over scenarios of growth limits
-    file.suffix <- paste(100-min.share[["HH"]], collapse = "-") # suffix for file names (plots and Excel)
+# Adjust targets according to the preserve.target.level and prevent.negative.growth settings
+adjust.targets <- function(trgs) {
+    trgs <- lapply(trgs, copy)
+    if(preserve.target.level) {
+        # measure growth from the urbansim base data, so that the horizon-year levels match the control totals
+        for(ind in names(trgs)) {
+            geo.base <- CTgens[[ind]][, .(gen_base = sum(base)), by = "nosplit_geo_id"]
+            trgs[[ind]][geo.base, base := i.gen_base, on = "nosplit_geo_id"]
+        }
+    }
+    if(length(prevent.negative.growth) > 0) {
+        # floor targets at the base level, so that areas hold flat instead of declining
+        for(ind in prevent.negative.growth) {
+            nneg <- trgs[[ind]][target < base, .N]
+            if(nneg > 0) cat("\n", ind, ": ", nneg, " areas with negative growth set to zero growth.")
+            trgs[[ind]][, target := pmax(target, base)]
+        }
+    }
+    add.target.pph(trgs)
+}
+targets <- adjust.targets(targets)
+if(!is.null(mid.targets)) mid.targets <- adjust.targets(mid.targets)
 
+
+# Split the targets into HCT and non-HCT parts for one scenario of minimum non-HCT shares (min.share).
+# Returns a list of hhres, popres, empres, check, checkdf, weights and CTdf.
+split.targets <- function(targets, min.share) {
     CTdf <- checks <- todshare <- todshare.sub <- weights <- list()
     aggr.geo <- c()
     # iterate over indicators
@@ -327,6 +385,8 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
             #CTdf[[ind]][is_tod == TRUE, wtrg := pmax(trggrowth, 0) * target.share/100]
             CTdf[[ind]][is_tod == TRUE, wtrg := pop]
             CTdf[[ind]][CTdf[[ind]][is_tod == TRUE], wtrg := ifelse(is_tod == TRUE, i.wtrg, trggrowth - i.wtrg), on = "nosplit_geo_id"][is.na(wtrg), wtrg := trggrowth]
+            # growth cannot take the area below zero
+            CTdf[[ind]][, wtrg := pmax(-base, wtrg)]
         } else {
             # mark rows that do not have TOD siblings
             CTdf[[ind]][, has_tod := TRUE]
@@ -341,6 +401,8 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
             CTdf[[ind]][, overflow := 0]
             CTdf[[ind]][is_tod == FALSE & has_tod == TRUE & trg0 > netcap, `:=`(overflow = netcap - trg0, trg0 = netcap)]
             CTdf[[ind]][CTdf[[ind]][is_tod == FALSE & has_tod == TRUE], trg0 := ifelse(is_tod == TRUE, trg0 - i.overflow, trg0), on = "nosplit_geo_id"]
+            # growth cannot take the area below zero
+            CTdf[[ind]][, trg0 := pmax(-base, trg0)]
             
             # compute initial target shares
             CTdf[[ind]][, target.share := round(trg0/trggrowth * 100, 1)]
@@ -417,6 +479,8 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
             df[, overflow := 0]
             df[is_tod == FALSE & has_tod == TRUE & wtrg > netcap, `:=`(overflow = netcap - wtrg, wtrg = netcap)]
             df[df[is_tod == FALSE & has_tod == TRUE], wtrg := ifelse(is_tod == TRUE, wtrg - i.overflow, wtrg), on = "nosplit_geo_id"]
+            # growth cannot take the area below zero
+            df[, wtrg := pmax(-base, wtrg)]
             
             # update regional HCT shares
             todshare.old <- todshare[[ind]]
@@ -520,6 +584,30 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
     check[, RGid := as.character(RGid)][RGid == "-2", RGid := "Tot within RG"]
     check[, RGid := as.character(RGid)][RGid == "-1", RGid := "Total"]
     
+    if(preserve.target.level) {
+        drift <- unique(CTdf[["HH"]][, .(nosplit_geo_id, trgdif)])[abs(trgdif) > 1]
+        if(nrow(drift) > 0)
+            warning("HH: ", nrow(drift), " control areas did not reach their control-total level (net drift ", 
+                    round(drift[, sum(trgdif)]), ")")
+    }
+    return(list(hhres = hhres, popres = popres, empres = empres, check = check, checkdf = checkdf, 
+                weights = weights, CTdf = CTdf))
+}
+
+dat.for.bars <- list() 
+for(min.share in scenarios) { #  iterate over scenarios of growth limits
+    file.suffix <- paste(100-min.share[["HH"]], collapse = "-") # suffix for file names (plots and Excel)
+
+    res <- split.targets(targets, min.share)
+    hhres <- res$hhres
+    popres <- res$popres
+    empres <- res$empres
+    check <- res$check
+    weights <- res$weights
+    CTdf <- res$CTdf
+    # split to the growth-targets horizon year so that it can be used as an exact interpolation anchor
+    mid.res <- if(!is.null(mid.targets)) split.targets(mid.targets, min.share) else NULL
+
     # interpolate results and create unrolled CTs
     source("interpolate.R")
     
@@ -530,8 +618,16 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
                     c(base.year.in.targets, target.year, base.year.in.targets, target.year)))
     setnames(empres, c("Empbase", "Emptarget"), 
              paste0(c("Emp", "Emp"), c(base.year.in.targets, target.year)))
-    
-    
+
+    anker.years <- c(base.year.in.targets, target.year)
+    if(!is.null(mid.res)) { # add the growth-targets horizon year as an anchor
+        my <- targets.end.year
+        hhres[mid.res$hhres, `:=`(paste0(c("HH", "PPH"), my), list(i.HHtarget, i.PPHtarget)), on = "subreg_id"]
+        popres[mid.res$popres, paste0("HHPop", my) := i.HHPoptarget, on = "subreg_id"]
+        empres[mid.res$empres, paste0("Emp", my) := i.Emptarget, on = "subreg_id"]
+        anker.years <- sort(unique(c(anker.years, my)))
+    }
+
     to.interpolate <- list(HHPop = popres, HH = hhres, Emp = empres)
     CTs <- list(HHwork = hhres, HHPopwork = popres, EMPwork = empres, check = check)
     unrolled <- NULL
@@ -540,7 +636,7 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
     for (indicator in names(to.interpolate)) {
         if(is.null(to.interpolate[[indicator]])) next
         CTs[[indicator]] <- interpolate.controls.with.ankers(to.interpolate[[indicator]], indicator, 
-                                                             anker.years = c(base.year.in.targets, target.year),
+                                                             anker.years = anker.years,
                                                              years.to.fit = years.to.fit, id.col = geo.name.split)
         this.unrolled <- unroll(CTs[[indicator]], indicator, new.id.col = geo.name.split)
         unrolled <- if(is.null(unrolled)) this.unrolled else merge(unrolled, this.unrolled, all = TRUE)
@@ -550,7 +646,7 @@ for(min.share in scenarios) { #  iterate over scenarios of growth limits
     # aggregate to regional and interpolate into all years
     years.to.fit <- base.year:target.year
     unrolled.reg <- NULL
-    years <- unique(c(base.year, base.year.in.targets, target.year))
+    years <- sort(unique(c(base.year, anker.years)))
     for (indicator in names(to.interpolate)) {
         if(is.null(to.interpolate[[indicator]])) next
         tmpdf <- copy(to.interpolate[[indicator]])
