@@ -72,7 +72,7 @@ res_con_emp_growth_pct: 0.028 # percentage of employment growth from resource an
 # Parcels capacity settings (reads a precomputed parcel-level capacity CSV)
 #----------------------------
 parcels_capacity:
-  prop_path: "Q:/Projects/2023_Baseyear/FLU_and_Lockouts/capacity/CapacityPclFLU_res50_flu-2026-09-30_2026-10-05.csv"
+  prop_path: "Q:/Projects/2023_Baseyear/FLU_and_Lockouts/capacity/CapacityPclFLU_res50_flu-2026-09-30_2026-10-13.csv"
   file_prefix: "CapacityPclNoSampling_res50" # prefix of the output CSV file name
 
 #----------------------------
@@ -199,10 +199,10 @@ census_variables:
 gdb_layers:
   - name: control_areas
     file: Q:/Projects/2023_Baseyear/Political/control_geographies/control.gdb
-    layer: control26
+    layer: control26_2026_10_13
   - name: control_hct
     file: Q:/Projects/2023_Baseyear/Political/control_geographies/control.gdb
-    layer: control_hct26
+    layer: control_hct26_2026_10_13
 
 
 #----------------------------
@@ -358,7 +358,7 @@ steps:
  - steps.split_ct_to_hct # splits control totals into HCT and non-HCT parts in Python
  - steps.subregionalCTs # distributes city CTs by PPH and rebalances to controls
  - steps.regionalCTs # distributes regional CTs by PPH/workers/income and rebalances to controls
-#  - steps.output_control_totals # combines subregional and regional CTs and outputs to MySQL, pipeline.h5, and csv
+ - steps.output_control_totals # combines subregional and regional CTs and outputs to MySQL, pipeline.h5, and csv
 
 #  - steps.calculate_units_for_dashboard # calculates units for dashboard based on hct split control totals and parcel capacity
 #  - steps.render_validation_dashboard # executes validation notebooks and runs `quarto render`

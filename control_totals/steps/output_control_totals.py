@@ -62,6 +62,12 @@ def run_step(context):
         pipeline.save_table(reg_table_names[dtype], pipeline.get_table(f'regionalCTs_{dtype}'))
         print(f'Saved {len(pipeline.get_table(f"regionalCTs_{dtype}"))} rows to {reg_table_names[dtype]} in pipeline.h5')
 
+    
+    # update the tables names to include a date suffix
+    today = pd.Timestamp.today().strftime('%Y-%m-%d')
+    table_names = {k: f"{v}_{today}" for k, v in table_names.items()}
+    reg_table_names = {k: f"{v}_{today}" for k, v in reg_table_names.items()}
+
     # Save to CSV
     if cfg.get('save_to_csv', False):
         out_dir = pipeline.get_output_dir()
