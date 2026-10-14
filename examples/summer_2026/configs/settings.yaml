@@ -72,8 +72,8 @@ res_con_emp_growth_pct: 0.028 # percentage of employment growth from resource an
 # Parcels capacity settings (reads a precomputed parcel-level capacity CSV)
 #----------------------------
 parcels_capacity:
-  prop_path: "Q:/Projects/2023_Baseyear/FLU_and_Lockouts/capacity/CapacityPclFLU_res50_flu-2026-09-30_2026-10-13.csv"
-  file_prefix: "CapacityPclNoSampling_res50" # prefix of the output CSV file name
+  prop_path: N:/vision2050/opusgit/urbansim_data/data/psrc_parcel/runs/flatten/run_55.2026_10_14_11_01_unlimited/csv/CapacityPclNoSampling_res50-2026-10-14.csv
+  file_prefix: CapacityPclNoSampling_res50 # prefix of the output CSV file name
 
 #----------------------------
 # Rebased control totals settings
