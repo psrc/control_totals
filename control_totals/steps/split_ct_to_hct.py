@@ -628,6 +628,44 @@ def _apply_negative_growth_floor(targets, indicators):
 	return floored
 
 
+def _hold_no_growth_areas(targets, no_growth_xwalk):
+	"""Pin no-growth control areas at their base level after rebasing.
+
+	The control-totals workbook holds excluded control areas (e.g. military
+	bases) flat at the OFM/QCEW base-year value, which differs from the
+	UrbanSim base data the split now starts from. Once ``base`` has been
+	rebased to UrbanSim, each excluded area's ``target`` is reset to ``base``
+	so it stays flat in every year. The growth removed from an excluded area is
+	added to the non-excluded control areas sharing its ``target_id`` so the
+	target-area total is unchanged, mirroring ``create_controls``.
+
+	Args:
+		targets (dict): Per-indicator target DataFrames, already rebased.
+		no_growth_xwalk (pandas.DataFrame): Columns ``nosplit_geo_id``,
+			``target_id`` and ``exclude_from_target``.
+
+	Returns:
+		dict: New per-indicator target DataFrames with no-growth areas held flat
+			and ``trg_pph`` / ``trg_pop`` recomputed on ``'HH'``.
+	"""
+	xwalk = no_growth_xwalk[['nosplit_geo_id', 'target_id', 'exclude_from_target']].drop_duplicates('nosplit_geo_id')
+	held = {}
+	for indicator, frame in targets.items():
+		frame = frame.merge(xwalk, on='nosplit_geo_id', how='left')
+		excluded = frame['exclude_from_target'].fillna(0) == 1
+		removed = (frame['target'] - frame['base']).where(excluded, 0.0)
+		removed_by_target = removed.groupby(frame['target_id']).transform('sum').fillna(0.0)
+		frame.loc[~excluded, 'target'] = frame.loc[~excluded, 'target'] + removed_by_target[~excluded]
+		frame.loc[excluded, 'target'] = frame.loc[excluded, 'base']
+		held[indicator] = frame.drop(columns=['target_id', 'exclude_from_target'])
+
+	hh_growth = held['HH']['target'] - held['HH']['base']
+	pop_growth = held['HHPop']['target'] - held['HHPop']['base']
+	held['HH']['trg_pph'] = _series_divide(pop_growth, hh_growth, default=0).fillna(0)
+	held['HH']['trg_pop'] = pop_growth
+	return held
+
+
 def _warn_negative_growth(df, indicator, max_listed=20):
 	"""Warn when negative target growth reaches the TOD capacity-share algorithm.
 
@@ -696,7 +734,7 @@ def _warn_target_level_drift(df, indicator, tolerance=1.0, max_listed=10):
 	)
 
 
-def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgshare, step_values, aggregate_no_growth_areas, max_iterations, preserve_target_level=False, prevent_negative_growth=None):
+def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgshare, step_values, aggregate_no_growth_areas, max_iterations, preserve_target_level=False, prevent_negative_growth=None, no_growth_xwalk=None):
 	"""Run the iterative TOD/non-TOD growth-split algorithm for one scenario.
 
 	For each indicator (HH, Emp, HHPop), distributes growth between TOD and
@@ -722,6 +760,10 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 			(subset of ``'HH'``, ``'Emp'``, ``'HHPop'``) whose target is
 			floored at the base level so a control area cannot be assigned
 			negative growth. Defaults to ``None`` (no flooring).
+		no_growth_xwalk (pandas.DataFrame, optional): Columns
+			``nosplit_geo_id``, ``target_id`` and ``exclude_from_target``. When
+			given, flagged control areas are held flat at the base level
+			(see :func:`_hold_no_growth_areas`). Defaults to ``None``.
 
 	Returns:
 		dict: Dictionary with keys ``'hhres'``, ``'popres'``, ``'empres'``,
@@ -736,6 +778,9 @@ def split_targets_for_scenario(targets, ct_generators, geo_cap, scenario, trgsha
 
 	if preserve_target_level:
 		targets = _rebase_targets_to_generators(targets, ct_generators)
+
+	if no_growth_xwalk is not None:
+		targets = _hold_no_growth_areas(targets, no_growth_xwalk)
 
 	if prevent_negative_growth:
 		targets = _apply_negative_growth_floor(targets, prevent_negative_growth)
@@ -1380,6 +1425,10 @@ def run_step(context):
 	if preserve_target_level and targets_end_year != target_year:
 		mid_targets, _ = load_targets(workbook_path, base_year_in_targets, targets_end_year)
 	_, geo_cap = load_capacity(capacity_path)
+	no_growth_xwalk = (
+		pipeline.get_table('control_target_xwalk')[['control_id', 'target_id', 'exclude_from_target']]
+		.rename(columns={'control_id': 'nosplit_geo_id'})
+	)
 
 	use_mysql = bool(cfg.get('use_mysql', False))
 	base_data = load_base_data(
@@ -1417,6 +1466,7 @@ def run_step(context):
 			max_iterations=max_iterations,
 			preserve_target_level=preserve_target_level,
 			prevent_negative_growth=prevent_negative_growth,
+			no_growth_xwalk=no_growth_xwalk,
 		)
 
 		mid_result = None
@@ -1432,6 +1482,7 @@ def run_step(context):
 				max_iterations=max_iterations,
 				preserve_target_level=preserve_target_level,
 				prevent_negative_growth=prevent_negative_growth,
+				no_growth_xwalk=no_growth_xwalk,
 			)
 
 		cts = build_interpolated_outputs(
