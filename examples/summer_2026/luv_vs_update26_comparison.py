@@ -17,7 +17,7 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 
 LUV_PATH = "J:/Projects/LandUseVision/LUV.3/Control_totals/SubJuris_ConTots/LUVit_ct_by_tod_generator_90-90-90_2024-10-18_6575_LUVit_Match.xlsx"
-UPDATE26_PATH = HERE / 'output/LUVit_ct_by_tod_generator-2026-10-28_90-90-90.xlsx'
+UPDATE26_PATH = HERE / 'output/LUVit_ct_by_tod_generator-2026-11-18_90-90-90.xlsx'
 LUV_XWALK_PATH = "J:/Projects/LandUseVision/LUV.3/Final_Products/LUV-it Dataset.xlsx"
 UPDATE26_XWALK_PATH = HERE / 'data/control_target_xwalk.csv'
 OUT_FILE = HERE / 'output/ct_luv_vs_update26_comparison.xlsx'

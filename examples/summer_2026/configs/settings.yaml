@@ -72,7 +72,7 @@ res_con_emp_growth_pct: 0.028 # percentage of employment growth from resource an
 # Parcels capacity settings (reads a precomputed parcel-level capacity CSV)
 #----------------------------
 parcels_capacity:
-  prop_path: Q:/Projects/2023_Baseyear/FLU_and_Lockouts/capacity/CapacityPclNoSampling_res50-2026-11-16.csv
+  prop_path: Q:/Projects/2023_Baseyear/FLU_and_Lockouts/capacity/CapacityPclNoSampling_res50-2026-11-18.csv
   file_prefix: CapacityPclNoSampling_res50 # prefix of the output CSV file name
 
 #----------------------------
